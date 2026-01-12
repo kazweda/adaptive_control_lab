@@ -75,4 +75,41 @@ void main() {
     expect(find.text('PID ゲイン調整'), findsOneWidget);
     expect(find.text('プラント設定（自動制御される対象）'), findsOneWidget);
   });
+
+  testWidgets('表示ウィンドウの選択肢と切り替えができる', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1.0;
+
+    await tester.pumpWidget(const MyApp());
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    // 初期選択は 200
+    expect(find.text('表示ウィンドウ'), findsOneWidget);
+    expect(find.text('200'), findsOneWidget);
+
+    // ドロップダウンを開いて 500 を選択
+    await tester.tap(find.byType(DropdownButton<int?>));
+    await tester.pump();
+    await tester.tap(find.text('500').last);
+    await tester.pump();
+    expect(find.text('500'), findsOneWidget);
+
+    // 続けて 1000 を選択
+    await tester.tap(find.byType(DropdownButton<int?>));
+    await tester.pump();
+    await tester.tap(find.text('1000').last);
+    await tester.pump();
+    expect(find.text('1000'), findsOneWidget);
+
+    // 全履歴を選択
+    await tester.tap(find.byType(DropdownButton<int?>));
+    await tester.pump();
+    await tester.tap(find.text('全履歴').last);
+    await tester.pump();
+    expect(find.text('全履歴'), findsOneWidget);
+  });
 }
