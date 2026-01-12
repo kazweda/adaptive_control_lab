@@ -8,6 +8,13 @@ Flutter を用いた **制御系シミュレーション・可視化アプリ**�
 
 ---
 
+## 📚 ドキュメント
+
+- **[開発手順ガイド](docs/DEVELOPMENT.md)** - 開発フロー、PR作成手順
+- **[コード品質ポリシー](docs/QUALITY_POLICY.md)** - テスト、リファクタリング基準
+
+---
+
 ## Features
 
 - 離散時間プラントシミュレーション（1次 / 2次系）
@@ -107,6 +114,27 @@ Timer.periodic(const Duration(milliseconds: 50), (_) {
 - Estimated parameters (STR)
 
 STR の適応過程が視覚的に確認できることを重視する。
+
+---
+
+## 🧪 テスト
+
+```bash
+# 全テスト実行
+flutter test
+
+# カバレッジ付きテスト
+flutter test --coverage
+
+# コード解析
+flutter analyze
+```
+
+### テストカバレッジ
+
+- `lib/control/`: ✅ 90%以上
+- `lib/simulation/`: ✅ 90%以上
+- `lib/ui/`: ⚠️ 部分的
 
 ---
 
