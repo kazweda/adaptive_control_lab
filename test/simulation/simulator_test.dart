@@ -67,6 +67,18 @@ void main() {
       expect(sim.historyControl.length, 200);
     });
 
+    test('任意の履歴上限指定でも制限される', () {
+      final sim = Simulator(maxHistoryLength: 50);
+
+      for (int i = 0; i < 120; i++) {
+        sim.step();
+      }
+
+      expect(sim.historyTarget.length, 50);
+      expect(sim.historyOutput.length, 50);
+      expect(sim.historyControl.length, 50);
+    });
+
     test('リセット機能の確認', () {
       final sim = Simulator();
 
