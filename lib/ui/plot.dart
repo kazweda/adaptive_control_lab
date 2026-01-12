@@ -21,13 +21,12 @@ class TimeSeriesPlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // データが空または不整合な場合は説明を表示
-    final bool hasEmptyData =
-        historyTarget.isEmpty ||
+    final bool hasEmptyData = historyTarget.isEmpty ||
         historyOutput.isEmpty ||
         historyControl.isEmpty;
     final bool hasInconsistentLength =
         historyTarget.length != historyOutput.length ||
-        historyTarget.length != historyControl.length;
+            historyTarget.length != historyControl.length;
 
     if (hasEmptyData || hasInconsistentLength) {
       return Card(
@@ -208,9 +207,8 @@ class TimeSeriesPlot extends StatelessWidget {
     final spots = <FlSpot>[];
 
     // データポイントの開始位置を計算（最新データを右端に表示）
-    final startIndex = data.length > maxDataPoints
-        ? data.length - maxDataPoints
-        : 0;
+    final startIndex =
+        data.length > maxDataPoints ? data.length - maxDataPoints : 0;
 
     for (int i = 0; i < data.length && i < maxDataPoints; i++) {
       final dataIndex = startIndex + i;
