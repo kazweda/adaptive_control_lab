@@ -1,30 +1,47 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// UIの基本的なウィジェットテスト
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:adaptive_control_lab/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('メイン画面の基本要素が表示される', (WidgetTester tester) async {
+    // アプリを起動
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // タイトルの確認
+    expect(find.text('制御系シミュレーション'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // 制御ボタンの確認
+    expect(find.text('スタート'), findsOneWidget);
+    expect(find.text('ストップ'), findsOneWidget);
+    expect(find.text('リセット'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // ステータス表示の確認
+    expect(find.text('状態：'), findsOneWidget);
+    expect(find.text('停止中'), findsOneWidget);
+  });
+
+  testWidgets('スタートボタンで状態が変更される', (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    // 初期状態は停止中
+    expect(find.text('停止中'), findsOneWidget);
+
+    // スタートボタンをタップ
+    await tester.tap(find.text('スタート'));
+    await tester.pumpAndSettle();
+
+    // 実行中に変更される
+    expect(find.text('実行中'), findsOneWidget);
+  });
+
+  testWidgets('目標値・PIDゲイン・プラントパラメータのUIが表示される', (WidgetTester tester) async {
+    await tester.pumpWidget(const MyApp());
+
+    // 各セクションの確認
+    expect(find.text('目標値'), findsOneWidget);
+    expect(find.text('PID ゲイン調整'), findsOneWidget);
+    expect(find.text('プラント設定（自動制御される対象）'), findsOneWidget);
   });
 }
