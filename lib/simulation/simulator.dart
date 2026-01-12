@@ -3,6 +3,8 @@ import '../control/pid.dart';
 
 /// シミュレーション全体を管理するクラス
 class Simulator {
+  // 履歴上限（メモリ/パフォーマンス保護用）
+  final int maxHistoryLength;
   // 制御系のコンポーネント
   late Plant plant;
   late PIDController pidController;
@@ -22,7 +24,7 @@ class Simulator {
   double _controlInput = 0.0;
 
   /// コンストラクタ
-  Simulator() {
+  Simulator({this.maxHistoryLength = 5000}) {
     plant = Plant(a: 0.8, b: 0.5);
     pidController = PIDController(kp: 0.3, ki: 0.1, kd: 0.1);
   }
@@ -70,8 +72,8 @@ class Simulator {
     historyOutput.add(plant.output);
     historyControl.add(_controlInput);
 
-    // 履歴が大きくなりすぎないようにトリミング（最新200ステップ）
-    if (historyTarget.length > 200) {
+    // 履歴が大きくなりすぎないようにトリミング（最大 maxHistoryLength）
+    if (historyTarget.length > maxHistoryLength) {
       historyTarget.removeAt(0);
       historyOutput.removeAt(0);
       historyControl.removeAt(0);

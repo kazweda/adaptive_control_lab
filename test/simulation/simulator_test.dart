@@ -53,7 +53,8 @@ void main() {
     });
 
     test('履歴の最大数制限の確認', () {
-      final sim = Simulator();
+      // テストでは上限200を指定して挙動を検証
+      final sim = Simulator(maxHistoryLength: 200);
 
       // 200ステップを超えて実行
       for (int i = 0; i < 250; i++) {

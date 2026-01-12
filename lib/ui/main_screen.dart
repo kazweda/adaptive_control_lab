@@ -15,11 +15,47 @@ class _MainScreenState extends State<MainScreen> {
   late Simulator simulator;
   Timer? simulationTimer;
   bool isRunning = false;
+  int? _chartWindow = 200; // 200/500/1000/全履歴(null)
 
   @override
   void initState() {
     super.initState();
     simulator = Simulator();
+  }
+
+  int? _effectiveChartWindow() {
+    // 実行中に All(null) が選ばれている場合は 200 に制限
+    if (isRunning && _chartWindow == null) return 200;
+    return _chartWindow;
+  }
+
+  Widget _buildChartWindowSelector() {
+    const options = [200, 500, 1000, null];
+    String labelOf(int? v) => v == null ? '全履歴' : v.toString();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          '表示ウィンドウ',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        DropdownButton<int?>(
+          value: _chartWindow,
+          items: options
+              .map(
+                (v) =>
+                    DropdownMenuItem<int?>(value: v, child: Text(labelOf(v))),
+              )
+              .toList(),
+          onChanged: (v) {
+            setState(() {
+              _chartWindow = v;
+            });
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -76,11 +112,16 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // === チャート表示ウィンドウ切替 ===
+              _buildChartWindowSelector(),
+              const SizedBox(height: 8),
               // === 時系列グラフ ===
               TimeSeriesPlot(
                 historyTarget: simulator.historyTarget,
                 historyOutput: simulator.historyOutput,
                 historyControl: simulator.historyControl,
+                // 実行中は安全のため All 選択時でも 200 に制限
+                maxDataPoints: _effectiveChartWindow(),
               ),
               const SizedBox(height: 24),
 

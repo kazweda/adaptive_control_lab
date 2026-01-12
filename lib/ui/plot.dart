@@ -8,7 +8,8 @@ class TimeSeriesPlot extends StatelessWidget {
   final List<double> historyTarget;
   final List<double> historyOutput;
   final List<double> historyControl;
-  final int maxDataPoints;
+  // null の場合は全履歴表示
+  final int? maxDataPoints;
 
   const TimeSeriesPlot({
     super.key,
@@ -63,11 +64,15 @@ class TimeSeriesPlot extends StatelessWidget {
             // グラフ本体
             SizedBox(
               height: 300,
-              child: LineChart(
-                _buildLineChartData(),
-                duration: const Duration(
-                  milliseconds: 0,
-                ), // アニメーション無効化（パフォーマンス優先）
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                panEnabled: true,
+                scaleEnabled: true,
+                child: LineChart(
+                  _buildLineChartData(),
+                  duration: const Duration(milliseconds: 0),
+                ),
               ),
             ),
           ],
@@ -103,6 +108,7 @@ class TimeSeriesPlot extends StatelessWidget {
 
   /// グラフデータを構築
   LineChartData _buildLineChartData() {
+    final windowSize = maxDataPoints ?? historyTarget.length;
     return LineChartData(
       gridData: FlGridData(
         show: true,
@@ -162,7 +168,7 @@ class TimeSeriesPlot extends StatelessWidget {
         border: Border.all(color: Colors.grey[400]!),
       ),
       minX: 0,
-      maxX: maxDataPoints.toDouble(),
+      maxX: (windowSize <= 0 ? 0 : windowSize).toDouble(),
       minY: _calculateMinY(),
       maxY: _calculateMaxY(),
       lineBarsData: [
@@ -201,13 +207,14 @@ class TimeSeriesPlot extends StatelessWidget {
   LineChartBarData _buildLineChartBarData(List<double> data, Color color) {
     final spots = <FlSpot>[];
 
+    final windowSize = maxDataPoints ?? data.length;
     // データポイントの開始位置を計算（最新データを右端に表示）
-    final startIndex = data.length > maxDataPoints
-        ? data.length - maxDataPoints
-        : 0;
+    final startIndex = data.length > windowSize ? data.length - windowSize : 0;
 
-    for (int i = 0; i < data.length && i < maxDataPoints; i++) {
+    final points = windowSize.clamp(0, data.length);
+    for (int i = 0; i < points; i++) {
       final dataIndex = startIndex + i;
+      if (dataIndex >= data.length) break;
       final x = i.toDouble();
       final y = data[dataIndex];
       spots.add(FlSpot(x, y));
