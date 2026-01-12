@@ -30,10 +30,7 @@ jobs:
       - name: Analyze code
         run: flutter analyze
       
-      - name: Run tests
-        run: flutter test
-      
-      - name: Check test coverage
+      - name: Run tests with coverage
         run: |
           flutter test --coverage
-          echo "Test coverage report generated"
+          echo "Tests completed with coverage report"
