@@ -110,16 +110,10 @@ class TimeSeriesPlot extends StatelessWidget {
         horizontalInterval: 0.5,
         verticalInterval: 20,
         getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: Colors.grey.withValues(alpha: 0.2),
-            strokeWidth: 1,
-          );
+          return FlLine(color: Colors.grey[300]!, strokeWidth: 1);
         },
         getDrawingVerticalLine: (value) {
-          return FlLine(
-            color: Colors.grey.withValues(alpha: 0.2),
-            strokeWidth: 1,
-          );
+          return FlLine(color: Colors.grey[300]!, strokeWidth: 1);
         },
       ),
       titlesData: FlTitlesData(
@@ -165,7 +159,7 @@ class TimeSeriesPlot extends StatelessWidget {
       ),
       borderData: FlBorderData(
         show: true,
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.grey[400]!),
       ),
       minX: 0,
       maxX: maxDataPoints.toDouble(),
