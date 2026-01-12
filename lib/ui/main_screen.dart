@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../simulation/simulator.dart';
+import 'plot.dart';
 import 'dart:async';
 
 /// メイン画面UI
@@ -75,6 +76,14 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // === 時系列グラフ ===
+              TimeSeriesPlot(
+                historyTarget: simulator.historyTarget,
+                historyOutput: simulator.historyOutput,
+                historyControl: simulator.historyControl,
+              ),
+              const SizedBox(height: 24),
+
               // === ステータス表示 ===
               _buildStatusSection(),
               const SizedBox(height: 24),
