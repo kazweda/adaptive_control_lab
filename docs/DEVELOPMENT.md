@@ -89,6 +89,22 @@ gh pr create --title "feat: 機能名" --body "Implements #issue番号"
 
 GitHub Copilot が自動的にコードレビューを実行します。指摘事項があれば修正します。
 
+#### Copilot レビューコメントの確認
+
+```bash
+# PR番号を指定してレビューコメントを取得（JSON形式）
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments
+
+# 実際の使用例
+gh api repos/kazweda/adaptive_control_lab/pulls/6/comments
+
+# レビュー全体を取得
+gh api repos/kazweda/adaptive_control_lab/pulls/6/reviews
+
+# jqで整形して読みやすく表示
+gh api repos/kazweda/adaptive_control_lab/pulls/6/comments | jq '.[] | {path: .path, line: .line, body: .body}'
+```
+
 ### 7. マージ
 
 ```bash
