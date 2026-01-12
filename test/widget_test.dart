@@ -1,13 +1,24 @@
 // UIの基本的なウィジェットテスト
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:adaptive_control_lab/main.dart';
 
 void main() {
   testWidgets('メイン画面の基本要素が表示される', (WidgetTester tester) async {
+    // テスト用の画面サイズを設定（デフォルト800x600では小さいため）
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1.0;
+
     // アプリを起動
     await tester.pumpWidget(const MyApp());
+
+    // テスト終了時にリセット
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
 
     // タイトルの確認
     expect(find.text('制御系シミュレーション'), findsOneWidget);
@@ -23,21 +34,41 @@ void main() {
   });
 
   testWidgets('スタートボタンで状態が変更される', (WidgetTester tester) async {
+    // テスト用の画面サイズを設定
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1.0;
+
     await tester.pumpWidget(const MyApp());
+
+    // テスト終了時にリセット
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
 
     // 初期状態は停止中
     expect(find.text('停止中'), findsOneWidget);
 
     // スタートボタンをタップ
     await tester.tap(find.text('スタート'));
-    await tester.pumpAndSettle();
+    await tester.pump(); // pumpAndSettleではなくpumpを使用（Timerが動き続けるため）
 
     // 実行中に変更される
     expect(find.text('実行中'), findsOneWidget);
   });
 
   testWidgets('目標値・PIDゲイン・プラントパラメータのUIが表示される', (WidgetTester tester) async {
+    // テスト用の画面サイズを設定
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1.0;
+
     await tester.pumpWidget(const MyApp());
+
+    // テスト終了時にリセット
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
 
     // 各セクションの確認
     expect(find.text('目標値'), findsOneWidget);

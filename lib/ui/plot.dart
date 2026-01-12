@@ -20,8 +20,16 @@ class TimeSeriesPlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // データが空の場合は説明を表示
-    if (historyTarget.isEmpty) {
+    // データが空または不整合な場合は説明を表示
+    final bool hasEmptyData =
+        historyTarget.isEmpty ||
+        historyOutput.isEmpty ||
+        historyControl.isEmpty;
+    final bool hasInconsistentLength =
+        historyTarget.length != historyOutput.length ||
+        historyTarget.length != historyControl.length;
+
+    if (hasEmptyData || hasInconsistentLength) {
       return Card(
         child: Container(
           height: 300,
@@ -164,9 +172,9 @@ class TimeSeriesPlot extends StatelessWidget {
       minY: _calculateMinY(),
       maxY: _calculateMaxY(),
       lineBarsData: [
-        _buildLineChartBarData(historyTarget, Colors.blue, '目標値'),
-        _buildLineChartBarData(historyOutput, Colors.red, '出力'),
-        _buildLineChartBarData(historyControl, Colors.green, '制御入力'),
+        _buildLineChartBarData(historyTarget, Colors.blue),
+        _buildLineChartBarData(historyOutput, Colors.red),
+        _buildLineChartBarData(historyControl, Colors.green),
       ],
       lineTouchData: LineTouchData(
         enabled: true,
@@ -196,11 +204,7 @@ class TimeSeriesPlot extends StatelessWidget {
   }
 
   /// 線グラフのバーデータを構築
-  LineChartBarData _buildLineChartBarData(
-    List<double> data,
-    Color color,
-    String label,
-  ) {
+  LineChartBarData _buildLineChartBarData(List<double> data, Color color) {
     final spots = <FlSpot>[];
 
     // データポイントの開始位置を計算（最新データを右端に表示）

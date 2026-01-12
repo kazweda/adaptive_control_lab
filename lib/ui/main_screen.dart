@@ -13,7 +13,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late Simulator simulator;
-  late Timer simulationTimer;
+  Timer? simulationTimer;
   bool isRunning = false;
 
   @override
@@ -24,7 +24,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    simulationTimer.cancel();
+    simulationTimer?.cancel();
     super.dispose();
   }
 
@@ -48,7 +48,7 @@ class _MainScreenState extends State<MainScreen> {
   void _stopSimulation() {
     if (!isRunning) return;
 
-    simulationTimer.cancel();
+    simulationTimer?.cancel();
     setState(() {
       isRunning = false;
     });
