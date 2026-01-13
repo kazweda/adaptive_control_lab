@@ -109,6 +109,12 @@ class TimeSeriesPlot extends StatelessWidget {
   /// グラフデータを構築
   LineChartData _buildLineChartData() {
     final dataLength = historyTarget.length;
+    // 可視ウィンドウ長
+    final windowLen = (maxDataPoints == null || maxDataPoints! >= dataLength)
+        ? dataLength
+        : maxDataPoints!;
+    final startIndex = dataLength - windowLen;
+    final endIndex = dataLength - 1;
     return LineChartData(
       gridData: FlGridData(
         show: true,
@@ -167,14 +173,24 @@ class TimeSeriesPlot extends StatelessWidget {
         show: true,
         border: Border.all(color: Colors.grey[400]!),
       ),
-      minX: 0,
-      maxX: dataLength > 0 ? (dataLength - 1).toDouble() : 0,
-      minY: _calculateMinY(),
-      maxY: _calculateMaxY(),
+      minX: startIndex.toDouble(),
+      maxX: dataLength > 0 ? endIndex.toDouble() : 0,
+      minY: _calculateMinY(startIndex, endIndex),
+      maxY: _calculateMaxY(startIndex, endIndex),
       lineBarsData: [
-        _buildLineChartBarData(historyTarget, Colors.blue),
-        _buildLineChartBarData(historyOutput, Colors.red),
-        _buildLineChartBarData(historyControl, Colors.green),
+        _buildLineChartBarData(
+          historyTarget,
+          Colors.blue,
+          startIndex,
+          endIndex,
+        ),
+        _buildLineChartBarData(historyOutput, Colors.red, startIndex, endIndex),
+        _buildLineChartBarData(
+          historyControl,
+          Colors.green,
+          startIndex,
+          endIndex,
+        ),
       ],
       lineTouchData: LineTouchData(
         enabled: true,
@@ -204,10 +220,14 @@ class TimeSeriesPlot extends StatelessWidget {
   }
 
   /// 線グラフのバーデータを構築
-  LineChartBarData _buildLineChartBarData(List<double> data, Color color) {
+  LineChartBarData _buildLineChartBarData(
+    List<double> data,
+    Color color,
+    int startIndex,
+    int endIndex,
+  ) {
     final spots = <FlSpot>[];
-
-    for (int i = 0; i < data.length; i++) {
+    for (int i = startIndex; i <= endIndex; i++) {
       final x = i.toDouble();
       final y = data[i];
       spots.add(FlSpot(x, y));
@@ -225,14 +245,17 @@ class TimeSeriesPlot extends StatelessWidget {
   }
 
   /// Y軸の最小値を計算
-  double _calculateMinY() {
+  double _calculateMinY(int startIndex, int endIndex) {
     if (historyTarget.isEmpty &&
         historyOutput.isEmpty &&
         historyControl.isEmpty) {
       return -1.0;
     }
-
-    final allValues = [...historyTarget, ...historyOutput, ...historyControl];
+    final allValues = [
+      ...historyTarget.sublist(startIndex, endIndex + 1),
+      ...historyOutput.sublist(startIndex, endIndex + 1),
+      ...historyControl.sublist(startIndex, endIndex + 1),
+    ];
     final minValue = allValues.reduce((a, b) => a < b ? a : b);
 
     // 少し余裕を持たせる
@@ -240,14 +263,17 @@ class TimeSeriesPlot extends StatelessWidget {
   }
 
   /// Y軸の最大値を計算
-  double _calculateMaxY() {
+  double _calculateMaxY(int startIndex, int endIndex) {
     if (historyTarget.isEmpty &&
         historyOutput.isEmpty &&
         historyControl.isEmpty) {
       return 2.0;
     }
-
-    final allValues = [...historyTarget, ...historyOutput, ...historyControl];
+    final allValues = [
+      ...historyTarget.sublist(startIndex, endIndex + 1),
+      ...historyOutput.sublist(startIndex, endIndex + 1),
+      ...historyControl.sublist(startIndex, endIndex + 1),
+    ];
     final maxValue = allValues.reduce((a, b) => a > b ? a : b);
 
     // 少し余裕を持たせる

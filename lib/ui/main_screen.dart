@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../simulation/simulator.dart';
+import '../control/disturbance.dart';
 import 'plot.dart';
 import 'dart:async';
 
@@ -143,6 +144,9 @@ class _MainScreenState extends State<MainScreen> {
 
               // === プラントパラメータ調整 ===
               _buildPlantParamsSection(),
+              const SizedBox(height: 24),
+              // === 外乱設定 ===
+              _buildDisturbanceSection(),
             ],
           ),
         ),
@@ -195,6 +199,65 @@ class _MainScreenState extends State<MainScreen> {
               'ステップ',
               simulator.stepCount.toDouble(),
               isInteger: true,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 外乱設定（最小UI: 種類のみ）
+  Widget _buildDisturbanceSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '外乱設定',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '外乱タイプ',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<DisturbanceType>(
+                  value: simulator.disturbanceType,
+                  items: const [
+                    DropdownMenuItem(
+                      value: DisturbanceType.none,
+                      child: Text('なし'),
+                    ),
+                    DropdownMenuItem(
+                      value: DisturbanceType.step,
+                      child: Text('ステップ'),
+                    ),
+                    DropdownMenuItem(
+                      value: DisturbanceType.impulse,
+                      child: Text('インパルス'),
+                    ),
+                    DropdownMenuItem(
+                      value: DisturbanceType.sinusoid,
+                      child: Text('正弦波'),
+                    ),
+                    DropdownMenuItem(
+                      value: DisturbanceType.noise,
+                      child: Text('雑音'),
+                    ),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() {
+                      simulator.setDisturbanceType(v);
+                    });
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -422,30 +485,100 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const SizedBox(height: 12),
 
-            // a（フィードバック係数）
-            _buildPlantParamSlider(
-              label: '慣性の強さ (a)',
-              value: simulator.plantParamA,
-              onChanged: (value) {
-                setState(() {
-                  simulator.plantParamA = value;
-                });
-              },
-              description: '大きいほど前の値が強く影響',
+            // プラント次数切替
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'プラント次数',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<bool>(
+                  value: simulator.isSecondOrderPlant,
+                  items: const [
+                    DropdownMenuItem<bool>(value: false, child: Text('1次')),
+                    DropdownMenuItem<bool>(value: true, child: Text('2次')),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() {
+                      simulator.setPlantOrder(useSecondOrder: v);
+                    });
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // b（入力係数）
-            _buildPlantParamSlider(
-              label: '応答の敏感さ (b)',
-              value: simulator.plantParamB,
-              onChanged: (value) {
-                setState(() {
-                  simulator.plantParamB = value;
-                });
-              },
-              description: '大きいほど入力に敏感に反応',
-            ),
+            if (!simulator.isSecondOrderPlant) ...[
+              // 1次系: a, b
+              _buildPlantParamSlider(
+                label: '慣性の強さ (a)',
+                value: simulator.plantParamA,
+                onChanged: (value) {
+                  setState(() {
+                    simulator.plantParamA = value;
+                  });
+                },
+                description: '大きいほど前の値が強く影響',
+              ),
+              const SizedBox(height: 16),
+              _buildPlantParamSlider(
+                label: '応答の敏感さ (b)',
+                value: simulator.plantParamB,
+                onChanged: (value) {
+                  setState(() {
+                    simulator.plantParamB = value;
+                  });
+                },
+                description: '大きいほど入力に敏感に反応',
+              ),
+            ] else ...[
+              // 2次系: a1, a2, b1, b2
+              _buildPlantParamSlider(
+                label: 'フィードバック係数 (a1)',
+                value: simulator.plantParamA1,
+                onChanged: (value) {
+                  setState(() {
+                    simulator.plantParamA1 = value;
+                  });
+                },
+                description: 'y(k-1) の係数',
+              ),
+              const SizedBox(height: 16),
+              _buildPlantParamSlider(
+                label: 'フィードバック係数 (a2)',
+                value: simulator.plantParamA2,
+                onChanged: (value) {
+                  setState(() {
+                    simulator.plantParamA2 = value;
+                  });
+                },
+                description: 'y(k-2) の係数',
+              ),
+              const SizedBox(height: 16),
+              _buildPlantParamSlider(
+                label: '入力係数 (b1)',
+                value: simulator.plantParamB1,
+                onChanged: (value) {
+                  setState(() {
+                    simulator.plantParamB1 = value;
+                  });
+                },
+                description: 'u(k-1) の係数',
+              ),
+              const SizedBox(height: 16),
+              _buildPlantParamSlider(
+                label: '入力係数 (b2)',
+                value: simulator.plantParamB2,
+                onChanged: (value) {
+                  setState(() {
+                    simulator.plantParamB2 = value;
+                  });
+                },
+                description: 'u(k-2) の係数',
+              ),
+            ],
           ],
         ),
       ),
