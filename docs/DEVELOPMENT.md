@@ -48,6 +48,9 @@ git checkout -b feature/機能名
 # コード解析
 flutter analyze
 
+# フォーマット
+dart format .
+
 # テスト実行
 flutter test
 

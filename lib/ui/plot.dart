@@ -10,6 +10,8 @@ class TimeSeriesPlot extends StatelessWidget {
   final List<double> historyControl;
   // null の場合は全履歴表示
   final int? maxDataPoints;
+  // シミュレーション実行中フラグ（停止時は全履歴をスクロール可能に）
+  final bool isRunning;
 
   const TimeSeriesPlot({
     super.key,
@@ -17,6 +19,7 @@ class TimeSeriesPlot extends StatelessWidget {
     required this.historyOutput,
     required this.historyControl,
     this.maxDataPoints = 200,
+    this.isRunning = false,
   });
 
   @override
@@ -109,12 +112,21 @@ class TimeSeriesPlot extends StatelessWidget {
   /// グラフデータを構築
   LineChartData _buildLineChartData() {
     final dataLength = historyTarget.length;
-    // 可視ウィンドウ長
-    final windowLen = (maxDataPoints == null || maxDataPoints! >= dataLength)
-        ? dataLength
-        : maxDataPoints!;
-    final startIndex = (dataLength == 0) ? 0 : (dataLength - windowLen);
-    final endIndex = (dataLength == 0) ? 0 : (dataLength - 1);
+    // 停止時は全履歴を描画（スクロール可能）、実行中はウィンドウ制限
+    final int startIndex;
+    final int endIndex;
+    if (!isRunning && dataLength > 0) {
+      // 停止時: 全データを描画対象とする
+      startIndex = 0;
+      endIndex = dataLength - 1;
+    } else {
+      // 実行中: ウィンドウ制限で最新N点のみ
+      final windowLen = (maxDataPoints == null || maxDataPoints! >= dataLength)
+          ? dataLength
+          : maxDataPoints!;
+      startIndex = (dataLength == 0) ? 0 : (dataLength - windowLen);
+      endIndex = (dataLength == 0) ? 0 : (dataLength - 1);
+    }
     return LineChartData(
       gridData: FlGridData(
         show: true,
