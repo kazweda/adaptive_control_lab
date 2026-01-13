@@ -4,13 +4,14 @@ import 'package:fl_chart/fl_chart.dart';
 /// 時系列グラフウィジェット
 ///
 /// 目標値・プラント出力・制御入力をリアルタイムで表示
-class TimeSeriesPlot extends StatelessWidget {
+/// 停止時は水平スクロールバーで全データを閲覧可能
+class TimeSeriesPlot extends StatefulWidget {
   final List<double> historyTarget;
   final List<double> historyOutput;
   final List<double> historyControl;
-  // null の場合は全履歴表示
-  final int? maxDataPoints;
-  // シミュレーション実行中フラグ（停止時は全履歴をスクロール可能に）
+  // 表示するデータ点数（X軸の幅）
+  final int maxDataPoints;
+  // シミュレーション実行中フラグ（停止時はスクロール可能に）
   final bool isRunning;
 
   const TimeSeriesPlot({
@@ -23,15 +24,43 @@ class TimeSeriesPlot extends StatelessWidget {
   });
 
   @override
+  State<TimeSeriesPlot> createState() => _TimeSeriesPlotState();
+}
+
+class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
+  // 停止時のスクロール位置（0 = 最初のデータから開始）
+  late double scrollPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    scrollPosition = 0.0;
+  }
+
+  @override
+  void didUpdateWidget(TimeSeriesPlot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // データが追加された場合、停止時は最新データが見えるようスクロール位置を更新
+    if (!widget.isRunning &&
+        widget.historyTarget.length > oldWidget.historyTarget.length) {
+      final maxScrollPosition =
+          (widget.historyTarget.length - widget.maxDataPoints).toDouble();
+      if (maxScrollPosition > 0) {
+        scrollPosition = maxScrollPosition;
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // データが空または不整合な場合は説明を表示
     final bool hasEmptyData =
-        historyTarget.isEmpty ||
-        historyOutput.isEmpty ||
-        historyControl.isEmpty;
+        widget.historyTarget.isEmpty ||
+        widget.historyOutput.isEmpty ||
+        widget.historyControl.isEmpty;
     final bool hasInconsistentLength =
-        historyTarget.length != historyOutput.length ||
-        historyTarget.length != historyControl.length;
+        widget.historyTarget.length != widget.historyOutput.length ||
+        widget.historyTarget.length != widget.historyControl.length;
 
     if (hasEmptyData || hasInconsistentLength) {
       return Card(
@@ -54,6 +83,20 @@ class TimeSeriesPlot extends StatelessWidget {
       );
     }
 
+    // スクロール位置を制限（停止時）
+    final int dataLength = widget.historyTarget.length;
+    final int maxScrollPosition = (dataLength - widget.maxDataPoints).clamp(
+      0,
+      999999,
+    );
+    if (scrollPosition > maxScrollPosition) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          scrollPosition = maxScrollPosition.toDouble();
+        });
+      });
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -67,17 +110,17 @@ class TimeSeriesPlot extends StatelessWidget {
             // グラフ本体
             SizedBox(
               height: 300,
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 5.0,
-                panEnabled: true,
-                scaleEnabled: true,
-                child: LineChart(
-                  _buildLineChartData(),
-                  duration: const Duration(milliseconds: 0),
-                ),
+              child: LineChart(
+                _buildLineChartData(),
+                duration: const Duration(milliseconds: 0),
               ),
             ),
+
+            // 停止時のみスクロールバーを表示
+            if (!widget.isRunning && maxScrollPosition > 0) ...[
+              const SizedBox(height: 16),
+              _buildScrollBar(maxScrollPosition),
+            ],
           ],
         ),
       ),
@@ -109,23 +152,55 @@ class TimeSeriesPlot extends StatelessWidget {
     );
   }
 
+  /// スクロールバーを構築
+  Widget _buildScrollBar(int maxScrollPosition) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'スクロール位置: ${scrollPosition.toInt()} / $maxScrollPosition',
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        Slider(
+          min: 0,
+          max: maxScrollPosition.toDouble(),
+          value: scrollPosition,
+          onChanged: (value) {
+            setState(() {
+              scrollPosition = value;
+            });
+          },
+          divisions: maxScrollPosition > 0 ? maxScrollPosition : null,
+          label: scrollPosition.toInt().toString(),
+        ),
+      ],
+    );
+  }
+
   /// グラフデータを構築
   LineChartData _buildLineChartData() {
-    final dataLength = historyTarget.length;
-    // 停止時は全履歴を描画（スクロール可能）、実行中はウィンドウ制限
+    final dataLength = widget.historyTarget.length;
+
+    // 実行中：最新 maxDataPoints 点のみ表示
+    // 停止中：スクロール位置から maxDataPoints 点を表示
     final int startIndex;
     final int endIndex;
-    if (!isRunning && dataLength > 0) {
-      // 停止時: 全データを描画対象とする
-      startIndex = 0;
-      endIndex = dataLength - 1;
-    } else {
-      // 実行中: ウィンドウ制限で最新N点のみ
-      final windowLen = (maxDataPoints == null || maxDataPoints! >= dataLength)
+
+    if (widget.isRunning) {
+      // 実行中：最新 maxDataPoints 点のみ
+      final windowLen = (widget.maxDataPoints >= dataLength)
           ? dataLength
-          : maxDataPoints!;
+          : widget.maxDataPoints;
       startIndex = (dataLength == 0) ? 0 : (dataLength - windowLen);
       endIndex = (dataLength == 0) ? 0 : (dataLength - 1);
+    } else {
+      // 停止中：スクロール位置から maxDataPoints 点を表示
+      startIndex = scrollPosition.toInt();
+      endIndex = (startIndex + widget.maxDataPoints - 1).clamp(
+        0,
+        dataLength - 1,
+      );
     }
     return LineChartData(
       gridData: FlGridData(
@@ -191,14 +266,19 @@ class TimeSeriesPlot extends StatelessWidget {
       maxY: _calculateMaxY(startIndex, endIndex),
       lineBarsData: [
         _buildLineChartBarData(
-          historyTarget,
+          widget.historyTarget,
           Colors.blue,
           startIndex,
           endIndex,
         ),
-        _buildLineChartBarData(historyOutput, Colors.red, startIndex, endIndex),
         _buildLineChartBarData(
-          historyControl,
+          widget.historyOutput,
+          Colors.red,
+          startIndex,
+          endIndex,
+        ),
+        _buildLineChartBarData(
+          widget.historyControl,
           Colors.green,
           startIndex,
           endIndex,
@@ -258,21 +338,21 @@ class TimeSeriesPlot extends StatelessWidget {
 
   /// Y軸の最小値を計算
   double _calculateMinY(int startIndex, int endIndex) {
-    if (historyTarget.isEmpty &&
-        historyOutput.isEmpty &&
-        historyControl.isEmpty) {
+    if (widget.historyTarget.isEmpty &&
+        widget.historyOutput.isEmpty &&
+        widget.historyControl.isEmpty) {
       return -1.0;
     }
     // 境界チェック: インデックスが範囲外の場合は全体を使用
-    final safeStart = startIndex.clamp(0, historyTarget.length);
-    final safeEnd = (endIndex + 1).clamp(0, historyTarget.length);
+    final safeStart = startIndex.clamp(0, widget.historyTarget.length);
+    final safeEnd = (endIndex + 1).clamp(0, widget.historyTarget.length);
     if (safeStart >= safeEnd) {
       return -1.0;
     }
     final allValues = [
-      ...historyTarget.sublist(safeStart, safeEnd),
-      ...historyOutput.sublist(safeStart, safeEnd),
-      ...historyControl.sublist(safeStart, safeEnd),
+      ...widget.historyTarget.sublist(safeStart, safeEnd),
+      ...widget.historyOutput.sublist(safeStart, safeEnd),
+      ...widget.historyControl.sublist(safeStart, safeEnd),
     ];
     final minValue = allValues.reduce((a, b) => a < b ? a : b);
 
@@ -282,21 +362,21 @@ class TimeSeriesPlot extends StatelessWidget {
 
   /// Y軸の最大値を計算
   double _calculateMaxY(int startIndex, int endIndex) {
-    if (historyTarget.isEmpty &&
-        historyOutput.isEmpty &&
-        historyControl.isEmpty) {
+    if (widget.historyTarget.isEmpty &&
+        widget.historyOutput.isEmpty &&
+        widget.historyControl.isEmpty) {
       return 2.0;
     }
     // 境界チェック: インデックスが範囲外の場合は全体を使用
-    final safeStart = startIndex.clamp(0, historyTarget.length);
-    final safeEnd = (endIndex + 1).clamp(0, historyTarget.length);
+    final safeStart = startIndex.clamp(0, widget.historyTarget.length);
+    final safeEnd = (endIndex + 1).clamp(0, widget.historyTarget.length);
     if (safeStart >= safeEnd) {
       return 2.0;
     }
     final allValues = [
-      ...historyTarget.sublist(safeStart, safeEnd),
-      ...historyOutput.sublist(safeStart, safeEnd),
-      ...historyControl.sublist(safeStart, safeEnd),
+      ...widget.historyTarget.sublist(safeStart, safeEnd),
+      ...widget.historyOutput.sublist(safeStart, safeEnd),
+      ...widget.historyControl.sublist(safeStart, safeEnd),
     ];
     final maxValue = allValues.reduce((a, b) => a > b ? a : b);
 

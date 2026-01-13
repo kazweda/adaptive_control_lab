@@ -24,10 +24,11 @@ class _MainScreenState extends State<MainScreen> {
     simulator = Simulator();
   }
 
-  int? _effectiveChartWindow() {
+  int _effectiveChartWindow() {
+    // 停止中は _chartWindow の値を使用（デフォルト 200）
     // 実行中に All(null) が選ばれている場合は 200 に制限
     if (isRunning && _chartWindow == null) return 200;
-    return _chartWindow;
+    return _chartWindow ?? 200;
   }
 
   Widget _buildChartWindowSelector() {
