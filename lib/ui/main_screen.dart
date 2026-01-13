@@ -123,6 +123,7 @@ class _MainScreenState extends State<MainScreen> {
                 historyControl: simulator.historyControl,
                 // 実行中は安全のため All 選択時でも 200 に制限
                 maxDataPoints: _effectiveChartWindow(),
+                isRunning: isRunning,
               ),
               const SizedBox(height: 24),
 
