@@ -40,13 +40,40 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
   @override
   void didUpdateWidget(TimeSeriesPlot oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // データが追加された場合、停止時は最新データが見えるようスクロール位置を更新
+
+    // 実行中 → 停止 に遷移したタイミングで、最新データが見える位置に初期化
+    if (oldWidget.isRunning && !widget.isRunning) {
+      final int dataLength = widget.historyTarget.length;
+      final int maxScrollIndex = (dataLength - widget.maxDataPoints).clamp(
+        0,
+        dataLength,
+      );
+      scrollPosition = maxScrollIndex.toDouble();
+      return;
+    }
+
+    // データが追加された場合、停止時は常に最新データが見えるようスクロール位置を更新
     if (!widget.isRunning &&
         widget.historyTarget.length > oldWidget.historyTarget.length) {
-      final maxScrollPosition =
-          (widget.historyTarget.length - widget.maxDataPoints).toDouble();
-      if (maxScrollPosition > 0) {
-        scrollPosition = maxScrollPosition;
+      final int dataLength = widget.historyTarget.length;
+      final int maxScrollIndex = (dataLength - widget.maxDataPoints).clamp(
+        0,
+        dataLength,
+      );
+      if (maxScrollIndex > 0) {
+        scrollPosition = maxScrollIndex.toDouble();
+      }
+    }
+
+    // maxDataPoints が変更された場合、スクロール位置を調整
+    if (widget.maxDataPoints != oldWidget.maxDataPoints) {
+      final int dataLength = widget.historyTarget.length;
+      final int maxScrollIndex = (dataLength - widget.maxDataPoints).clamp(
+        0,
+        dataLength,
+      );
+      if (scrollPosition > maxScrollIndex) {
+        scrollPosition = maxScrollIndex.toDouble();
       }
     }
   }
@@ -85,17 +112,9 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
 
     // スクロール位置を制限（停止時）
     final int dataLength = widget.historyTarget.length;
-    final int maxScrollPosition = (dataLength - widget.maxDataPoints).clamp(
-      0,
-      999999,
-    );
-    if (scrollPosition > maxScrollPosition) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {
-          scrollPosition = maxScrollPosition.toDouble();
-        });
-      });
-    }
+    final int maxScrollPosition = (dataLength - widget.maxDataPoints) < 0
+        ? 0
+        : (dataLength - widget.maxDataPoints);
 
     return Card(
       child: Padding(
