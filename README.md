@@ -8,6 +8,13 @@ Flutter を用いた **制御系シミュレーション・可視化アプリ**�
 
 ---
 
+## 🌐 Web Demo
+
+> **[Demo サイト](https://kazweda.github.io/adaptive_control_lab/)** で今すぐお試しください！  
+> ブラウザのみで動作。インストール不要です。
+
+---
+
 ## 📚 ドキュメント
 
 - **[開発手順ガイド](docs/DEVELOPMENT.md)** - 開発フロー、PR作成手順
@@ -140,11 +147,12 @@ flutter analyze
 
 ## Roadmap
 
-- [ ] 1次系 + PID
-- [ ] 2次系 + 外乱
+- [x] 1次系 + PID
+- [x] 2次系 + 外乱
+- [x] Flutter Web 対応
 - [ ] RLS 同定
 - [ ] STR 実装
-- [ ] Flutter Web 対応
+- [ ] アニメーション課題（エレベータ、車両速度制御など）
 
 ---
 
