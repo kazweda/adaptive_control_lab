@@ -1,3 +1,5 @@
+import 'plant_model.dart';
+
 /// プラントモデル（1次系）
 ///
 /// 離散時間の1次系差分方程式：
@@ -7,7 +9,7 @@
 /// - a: フィードバック係数（慣性の強さ）
 /// - b: 入力係数（応答の敏感さ）
 /// - u(k-1): 前のステップの制御入力
-class Plant {
+class Plant implements PlantModel {
   // プラントパラメータ
   double a; // フィードバック係数（大きいほど前の値が強く影響）
   double b; // 入力係数（大きいほど入力に敏感に反応）
@@ -20,12 +22,14 @@ class Plant {
   Plant({this.a = 0.8, this.b = 0.5});
 
   /// プラントの出力を取得
+  @override
   double get output => _output;
 
   /// プラントを1ステップ更新
   ///
   /// [input] 現在の制御入力 u(k)
   /// 戻り値：更新後のプラント出力 y(k)
+  @override
   double step(double input) {
     // 1次系の差分方程式を計算
     _output = a * _output + b * _previousInput;
@@ -37,6 +41,7 @@ class Plant {
   }
 
   /// プラントの状態をリセット
+  @override
   void reset() {
     _output = 0.0;
     _previousInput = 0.0;
