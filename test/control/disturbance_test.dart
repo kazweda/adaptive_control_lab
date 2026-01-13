@@ -48,5 +48,21 @@ void main() {
       expect(d.next(), closeTo(-1.0, 1e-2));
       expect(d.next(), closeTo(0.0, 1e-2));
     });
+
+    test('noise: ガウス雑音', () {
+      final d = Disturbance(
+        type: DisturbanceType.noise,
+        noiseStdDev: 0.1,
+        noiseSeed: 123,
+      );
+      // シード固定により再現性を確認
+      final v1 = d.next();
+      final v2 = d.next();
+      // 雑音は平均0なのでゼロ付近、標準偏差0.1なので±0.3程度に収まる
+      expect(v1.abs(), lessThan(0.5));
+      expect(v2.abs(), lessThan(0.5));
+      // 異なる値が生成されること
+      expect(v1, isNot(v2));
+    });
   });
 }

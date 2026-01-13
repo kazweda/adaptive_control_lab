@@ -113,8 +113,8 @@ class TimeSeriesPlot extends StatelessWidget {
     final windowLen = (maxDataPoints == null || maxDataPoints! >= dataLength)
         ? dataLength
         : maxDataPoints!;
-    final startIndex = dataLength - windowLen;
-    final endIndex = dataLength - 1;
+    final startIndex = (dataLength == 0) ? 0 : (dataLength - windowLen);
+    final endIndex = (dataLength == 0) ? 0 : (dataLength - 1);
     return LineChartData(
       gridData: FlGridData(
         show: true,
@@ -251,10 +251,16 @@ class TimeSeriesPlot extends StatelessWidget {
         historyControl.isEmpty) {
       return -1.0;
     }
+    // 境界チェック: インデックスが範囲外の場合は全体を使用
+    final safeStart = startIndex.clamp(0, historyTarget.length);
+    final safeEnd = (endIndex + 1).clamp(0, historyTarget.length);
+    if (safeStart >= safeEnd) {
+      return -1.0;
+    }
     final allValues = [
-      ...historyTarget.sublist(startIndex, endIndex + 1),
-      ...historyOutput.sublist(startIndex, endIndex + 1),
-      ...historyControl.sublist(startIndex, endIndex + 1),
+      ...historyTarget.sublist(safeStart, safeEnd),
+      ...historyOutput.sublist(safeStart, safeEnd),
+      ...historyControl.sublist(safeStart, safeEnd),
     ];
     final minValue = allValues.reduce((a, b) => a < b ? a : b);
 
@@ -269,10 +275,16 @@ class TimeSeriesPlot extends StatelessWidget {
         historyControl.isEmpty) {
       return 2.0;
     }
+    // 境界チェック: インデックスが範囲外の場合は全体を使用
+    final safeStart = startIndex.clamp(0, historyTarget.length);
+    final safeEnd = (endIndex + 1).clamp(0, historyTarget.length);
+    if (safeStart >= safeEnd) {
+      return 2.0;
+    }
     final allValues = [
-      ...historyTarget.sublist(startIndex, endIndex + 1),
-      ...historyOutput.sublist(startIndex, endIndex + 1),
-      ...historyControl.sublist(startIndex, endIndex + 1),
+      ...historyTarget.sublist(safeStart, safeEnd),
+      ...historyOutput.sublist(safeStart, safeEnd),
+      ...historyControl.sublist(safeStart, safeEnd),
     ];
     final maxValue = allValues.reduce((a, b) => a > b ? a : b);
 
