@@ -208,8 +208,10 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  /// 外乱設定（最小UI: 種類のみ）
+  /// 外乱設定（種類選択とプリセットボタン）
   Widget _buildDisturbanceSection() {
+    final presets = Simulator.getAvailablePresets();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -221,6 +223,7 @@ class _MainScreenState extends State<MainScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
+            // 外乱タイプドロップダウン
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -260,6 +263,63 @@ class _MainScreenState extends State<MainScreen> {
                   },
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            // 現在のプリセット表示
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'プリセット',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    simulator.currentPresetName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // プリセットボタングリッド
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: presets.map((preset) {
+                final isActive =
+                    simulator.currentPresetName == preset.displayName;
+                return ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+                    foregroundColor: isActive ? Colors.white : Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      simulator.applyDisturbancePreset(preset.name);
+                    });
+                  },
+                  child: Text(
+                    preset.displayName,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),
