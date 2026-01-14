@@ -86,11 +86,11 @@ docs: Update documentation
 
 ### PR Template
 
-All PRs use `.github/pull_request_template.md` which requires:
+All PRs use the template file (pull_request_template.md in .github directory) which requires:
 - Implementation description
-- Related issue reference (e.g., `Implements #4`)
+- Related issue reference (e.g., Implements #4)
 - Test checklist completion
-- Adherence to `docs/QUALITY_POLICY.md`
+- Adherence to QUALITY_POLICY.md in docs directory
 
 ## Code Conventions
 

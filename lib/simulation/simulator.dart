@@ -186,6 +186,7 @@ class Simulator {
     // 制御入力が安全上限を超えたら停止（プラント更新前に中断）
     if (_controlInput.abs() > maxControlInputAbs) {
       _halted = true;
+      // 制御入力超過時は履歴も追加せず完全に中断
       return;
     }
 
@@ -193,15 +194,20 @@ class Simulator {
     final d = disturbance?.next() ?? 0.0; // 入力外乱を加算（最小統合）
     plant.step(_controlInput + d);
 
+    // stepCountをインクリメント（出力チェック前に実施）
+    stepCount++;
+
     // 出力が安全上限を超えたら停止
     if (plant.output.abs() > maxOutputAbs) {
       _halted = true;
+      // 出力超過時も履歴追加せずに中断（一貫性のため）
+      return;
     }
 
-    // データ履歴に追加
+    // データ履歴に追加（halt時は到達しない）
     historyTarget.add(targetValue);
-    historyOutput.add(_clampToLimit(plant.output, maxOutputAbs));
-    historyControl.add(_clampToLimit(_controlInput, maxControlInputAbs));
+    historyOutput.add(plant.output);
+    historyControl.add(_controlInput);
 
     // 履歴が大きくなりすぎないようにトリミング（最大 maxHistoryLength）
     if (historyTarget.length > maxHistoryLength) {
@@ -209,8 +215,6 @@ class Simulator {
       historyOutput.removeAt(0);
       historyControl.removeAt(0);
     }
-
-    stepCount++;
   }
 
   /// シミュレーションをリセット
@@ -233,13 +237,6 @@ class Simulator {
   PIDController _createSecondOrderDefaultPid() {
     // 2次プラントはより抑えめのゲインで初期化（発散防止）
     return PIDController(kp: 0.12, ki: 0.02, kd: 0.04);
-  }
-
-  double _clampToLimit(double value, double limit) {
-    if (limit <= 0) return value;
-    if (value > limit) return limit;
-    if (value < -limit) return -limit;
-    return value;
   }
 
   /// 現在の状態を取得（デバッグ用）
