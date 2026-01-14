@@ -8,6 +8,9 @@ import '../control/pid.dart';
 class Simulator {
   // 履歴上限（メモリ/パフォーマンス保護用）
   final int maxHistoryLength;
+  // 安全ガード（発散防止の上限）
+  final double maxOutputAbs;
+  final double maxControlInputAbs;
   // 制御系のコンポーネント
   late PlantModel plant;
   late PIDController pidController;
@@ -30,10 +33,17 @@ class Simulator {
   // 制御入力の保持（UI表示用）
   double _controlInput = 0.0;
 
+  // 発散検知（制限超過でシミュレーションを停止）
+  bool _halted = false;
+
   /// コンストラクタ
-  Simulator({this.maxHistoryLength = 5000}) {
+  Simulator({
+    this.maxHistoryLength = 5000,
+    this.maxOutputAbs = 10.0,
+    this.maxControlInputAbs = 10.0,
+  }) {
     plant = Plant(a: 0.8, b: 0.5);
-    pidController = PIDController(kp: 0.3, ki: 0.1, kd: 0.1);
+    pidController = _createFirstOrderDefaultPid();
     disturbance = Disturbance(type: DisturbanceType.none);
   }
 
@@ -44,6 +54,9 @@ class Simulator {
 
   /// 制御入力を取得
   double get controlInput => _controlInput;
+
+  /// 発散検知フラグ（制限値超過で true）
+  bool get isHalted => _halted;
 
   // === 外乱のアクセサ ===
   DisturbanceType get disturbanceType =>
@@ -140,8 +153,10 @@ class Simulator {
     // プラント差し替え（状態はリセットする）
     if (_useSecondOrderPlant) {
       plant = SecondOrderPlant();
+      pidController = _createSecondOrderDefaultPid();
     } else {
       plant = Plant(a: 0.8, b: 0.5);
+      pidController = _createFirstOrderDefaultPid();
     }
     // 既存履歴はクリア（整合性のため）
     reset();
@@ -160,20 +175,33 @@ class Simulator {
 
   /// シミュレーションを1ステップ進める
   void step() {
+    if (_halted) return;
+
     // 誤差を計算
     final error = targetValue - plant.output;
 
     // PID制御器で制御入力を計算
     _controlInput = pidController.compute(error);
 
+    // 制御入力が安全上限を超えたら停止（プラント更新前に中断）
+    if (_controlInput.abs() > maxControlInputAbs) {
+      _halted = true;
+      return;
+    }
+
     // プラントを更新
     final d = disturbance?.next() ?? 0.0; // 入力外乱を加算（最小統合）
     plant.step(_controlInput + d);
 
+    // 出力が安全上限を超えたら停止
+    if (plant.output.abs() > maxOutputAbs) {
+      _halted = true;
+    }
+
     // データ履歴に追加
     historyTarget.add(targetValue);
-    historyOutput.add(plant.output);
-    historyControl.add(_controlInput);
+    historyOutput.add(_clampToLimit(plant.output, maxOutputAbs));
+    historyControl.add(_clampToLimit(_controlInput, maxControlInputAbs));
 
     // 履歴が大きくなりすぎないようにトリミング（最大 maxHistoryLength）
     if (historyTarget.length > maxHistoryLength) {
@@ -190,10 +218,28 @@ class Simulator {
     plant.reset();
     pidController.reset();
     _controlInput = 0.0;
+    _halted = false;
     stepCount = 0;
     historyTarget.clear();
     historyOutput.clear();
     historyControl.clear();
+  }
+
+  PIDController _createFirstOrderDefaultPid() {
+    // 1次プラント向けの標準ゲイン
+    return PIDController(kp: 0.3, ki: 0.1, kd: 0.1);
+  }
+
+  PIDController _createSecondOrderDefaultPid() {
+    // 2次プラントはより抑えめのゲインで初期化（発散防止）
+    return PIDController(kp: 0.12, ki: 0.02, kd: 0.04);
+  }
+
+  double _clampToLimit(double value, double limit) {
+    if (limit <= 0) return value;
+    if (value > limit) return limit;
+    if (value < -limit) return -limit;
+    return value;
   }
 
   /// 現在の状態を取得（デバッグ用）

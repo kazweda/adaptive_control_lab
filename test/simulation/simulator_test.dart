@@ -162,5 +162,21 @@ void main() {
       // ゲインが大きい方が応答が速いはず（比例ゲインのみの場合）
       expect(sim2.plantOutput, greaterThan(sim1.plantOutput));
     });
+
+    test('2次プラント初期ゲインで発散しない（安全上限内に収まる）', () {
+      final sim = Simulator(maxOutputAbs: 5.0, maxControlInputAbs: 5.0);
+
+      // 2次プラントに切替（初期PIDゲインも2次系用にリセット）
+      sim.setPlantOrder(useSecondOrder: true);
+
+      for (int i = 0; i < 200; i++) {
+        sim.step();
+        if (sim.isHalted) break;
+      }
+
+      // 初期ゲインで発散しないことを確認（安全上限を超えない）
+      expect(sim.isHalted, isFalse);
+      expect(sim.plantOutput.abs(), lessThanOrEqualTo(5.0));
+    });
   });
 }
