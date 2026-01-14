@@ -286,6 +286,26 @@ void main() {
       expect(presets.map((p) => p.name), contains('none'));
     });
 
+    test('すべての12個のプリセット名が存在する', () {
+      final presets = Simulator.getAvailablePresets();
+      final presetNames = presets.map((p) => p.name).toSet();
+      final expectedNames = {
+        'none',
+        'step_early',
+        'step_mid',
+        'step_large',
+        'impulse_small',
+        'impulse_large',
+        'sinusoid_slow',
+        'sinusoid_mid',
+        'sinusoid_fast',
+        'noise_small',
+        'noise_mid',
+        'noise_large',
+      };
+      expect(presetNames, expectedNames, reason: '全12個の予期されたプリセット名が存在すること');
+    });
+
     test('プリセットを適用すると外乱タイプが変更される', () {
       final sim = Simulator();
       sim.applyDisturbancePreset('step_early');
@@ -353,6 +373,25 @@ void main() {
       final sim = Simulator();
       sim.applyDisturbancePreset('none');
       expect(sim.disturbanceType, DisturbanceType.none);
+    });
+
+    test('reset後は外乱状態とプリセット名もリセット', () {
+      final sim = Simulator();
+      sim.applyDisturbancePreset('noise_mid');
+      sim.targetValue = 1.0;
+
+      for (int i = 0; i < 5; i++) {
+        sim.step();
+      }
+
+      expect(sim.disturbanceType, DisturbanceType.noise);
+      expect(sim.stepCount, 5);
+
+      sim.reset();
+
+      expect(sim.disturbanceType, DisturbanceType.noise); // 外乱タイプは保持
+      expect(sim.currentPresetName, 'なし'); // プリセット名はリセット
+      expect(sim.stepCount, 0);
     });
   });
 }

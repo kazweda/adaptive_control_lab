@@ -387,9 +387,11 @@ class Simulator {
   void reset() {
     plant.reset();
     pidController.reset();
+    disturbance?.reset();
     _controlInput = 0.0;
     _halted = false;
     stepCount = 0;
+    _currentPresetName = 'なし';
     historyTarget.clear();
     historyOutput.clear();
     historyControl.clear();
