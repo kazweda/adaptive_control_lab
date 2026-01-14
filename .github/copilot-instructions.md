@@ -86,7 +86,7 @@ docs: Update documentation
 
 ### PR Template
 
-All PRs use [.github/pull_request_template.md](pull_request_template.md) which requires:
+All PRs use `.github/pull_request_template.md` which requires:
 - Implementation description
 - Related issue reference (e.g., `Implements #4`)
 - Test checklist completion
