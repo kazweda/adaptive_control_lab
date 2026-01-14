@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:adaptive_control_lab/simulation/simulator.dart';
+import 'package:adaptive_control_lab/control/disturbance.dart';
 
 void main() {
   group('Simulator (シミュレーション統合)', () {
@@ -275,6 +276,83 @@ void main() {
       expect(sim.isHalted, isTrue);
       // halt時は履歴に追加されない（一貫性のため）
       expect(sim.historyOutput.length, sim.stepCount);
+    });
+  });
+
+  group('Disturbance Presets', () {
+    test('getAvailablePresetsが12個のプリセットを返す', () {
+      final presets = Simulator.getAvailablePresets();
+      expect(presets.length, 12);
+      expect(presets.map((p) => p.name), contains('none'));
+    });
+
+    test('プリセットを適用すると外乱タイプが変更される', () {
+      final sim = Simulator();
+      sim.applyDisturbancePreset('step_early');
+      expect(sim.disturbanceType, DisturbanceType.step);
+    });
+
+    test('複数のプリセットを順次切り替え可能', () {
+      final sim = Simulator();
+      sim.applyDisturbancePreset('impulse_small');
+      expect(sim.disturbanceType, DisturbanceType.impulse);
+
+      sim.applyDisturbancePreset('sinusoid_fast');
+      expect(sim.disturbanceType, DisturbanceType.sinusoid);
+    });
+
+    test('プリセット適用後のシミュレーション一貫性', () {
+      final sim = Simulator();
+      sim.applyDisturbancePreset('noise_small');
+      sim.targetValue = 1.0;
+
+      for (int i = 0; i < 10; i++) {
+        sim.step();
+      }
+
+      expect(sim.stepCount, 10);
+      expect(sim.historyControl.length, 10);
+    });
+
+    test('ノイズプリセットのシード固定で再現性がある', () {
+      final sim1 = Simulator();
+      sim1.applyDisturbancePreset('noise_mid');
+      sim1.targetValue = 1.0;
+      List<double> history1 = [];
+
+      for (int i = 0; i < 5; i++) {
+        sim1.step();
+        history1.add(sim1.historyOutput.last);
+      }
+
+      final sim2 = Simulator();
+      sim2.applyDisturbancePreset('noise_mid');
+      sim2.targetValue = 1.0;
+      List<double> history2 = [];
+
+      for (int i = 0; i < 5; i++) {
+        sim2.step();
+        history2.add(sim2.historyOutput.last);
+      }
+
+      // 同じプリセットなら同じ出力系列
+      expect(history1, history2);
+    });
+
+    test('カスタムパラメータでプリセット後の外乱を上書き可能', () {
+      final sim = Simulator();
+      sim.applyDisturbancePreset('step_early');
+      expect(sim.disturbanceType, DisturbanceType.step);
+
+      // パラメータを手動で変更して外乱タイプを変える
+      sim.setDisturbanceType(DisturbanceType.impulse);
+      expect(sim.disturbanceType, DisturbanceType.impulse);
+    });
+
+    test('noneプリセットは外乱なし', () {
+      final sim = Simulator();
+      sim.applyDisturbancePreset('none');
+      expect(sim.disturbanceType, DisturbanceType.none);
     });
   });
 }
