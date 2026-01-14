@@ -182,8 +182,26 @@ flutter test --coverage
 genhtml coverage/lcov.info -o coverage/html
 open coverage/html/index.html
 
-# Create PR with gh CLI
-gh pr create --title "feat: Feature name" --body "Implements #issue_number"
+# Create PR with gh CLI (safe UTF-8, avoid inline --body)
+# Recommended: use --body-file or heredoc to prevent garbled text
+
+# Method 1: --body-file (most reliable)
+gh pr create \
+	--title "feat: Feature name" \
+	--body-file pr.md
+
+# Method 2: heredoc via stdin (single-quoted EOF disables shell expansion)
+cat <<'EOF' | gh pr create \
+	--title "feat: Feature name" \
+	--body-file -
+## 実装内容
+
+変更点の要約をここに記載します。
+
+- 箇条書き
+- 日本語/Markdown/バッククォートも安全
+
+EOF
 ```
 
 ## Gotchas
