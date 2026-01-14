@@ -4,6 +4,64 @@ import '../control/plant_model.dart';
 import '../control/disturbance.dart';
 import '../control/pid.dart';
 
+/// 外乱プリセットの定義
+class DisturbancePreset {
+  final String name;
+  final String displayName;
+  final DisturbanceType type;
+  final double amplitude;
+  final int startStep;
+  final double omega;
+  final double phase;
+  final double noiseStdDev;
+  final int noiseSeed;
+
+  DisturbancePreset({
+    required this.name,
+    required this.displayName,
+    required this.type,
+    this.amplitude = 0.0,
+    this.startStep = 0,
+    this.omega = 0.0,
+    this.phase = 0.0,
+    this.noiseStdDev = 0.0,
+    this.noiseSeed = 42,
+  });
+
+  /// プリセットから Disturbance を生成
+  Disturbance toDisturbance() {
+    switch (type) {
+      case DisturbanceType.none:
+        return Disturbance(type: DisturbanceType.none);
+      case DisturbanceType.step:
+        return Disturbance(
+          type: DisturbanceType.step,
+          amplitude: amplitude,
+          startStep: startStep,
+        );
+      case DisturbanceType.impulse:
+        return Disturbance(
+          type: DisturbanceType.impulse,
+          amplitude: amplitude,
+          startStep: startStep,
+        );
+      case DisturbanceType.sinusoid:
+        return Disturbance(
+          type: DisturbanceType.sinusoid,
+          amplitude: amplitude,
+          omega: omega,
+          phase: phase,
+        );
+      case DisturbanceType.noise:
+        return Disturbance(
+          type: DisturbanceType.noise,
+          noiseStdDev: noiseStdDev,
+          noiseSeed: noiseSeed,
+        );
+    }
+  }
+}
+
 /// シミュレーション全体を管理するクラス
 class Simulator {
   // 履歴上限（メモリ/パフォーマンス保護用）
@@ -36,6 +94,9 @@ class Simulator {
   // 発散検知（制限超過でシミュレーションを停止）
   bool _halted = false;
 
+  // 現在適用中のプリセット名
+  String _currentPresetName = 'None';
+
   /// コンストラクタ
   Simulator({
     this.maxHistoryLength = 5000,
@@ -58,11 +119,116 @@ class Simulator {
   /// 発散検知フラグ（制限値超過で true）
   bool get isHalted => _halted;
 
+  /// 現在のプリセット名
+  String get currentPresetName => _currentPresetName;
+
   // === 外乱のアクセサ ===
   DisturbanceType get disturbanceType =>
       disturbance?.type ?? DisturbanceType.none;
   void setDisturbanceType(DisturbanceType type) {
     disturbance = _createDefaultDisturbance(type);
+    _currentPresetName = 'Custom';
+  }
+
+  /// プリセット一覧を取得
+  static List<DisturbancePreset> getAvailablePresets() {
+    return [
+      DisturbancePreset(
+        name: 'none',
+        displayName: 'なし',
+        type: DisturbanceType.none,
+      ),
+      DisturbancePreset(
+        name: 'step_early',
+        displayName: 'ステップ外乱（早期）',
+        type: DisturbanceType.step,
+        amplitude: 0.2,
+        startStep: 10,
+      ),
+      DisturbancePreset(
+        name: 'step_mid',
+        displayName: 'ステップ外乱（中期）',
+        type: DisturbanceType.step,
+        amplitude: 0.2,
+        startStep: 100,
+      ),
+      DisturbancePreset(
+        name: 'step_large',
+        displayName: 'ステップ外乱（大信号）',
+        type: DisturbanceType.step,
+        amplitude: 0.5,
+        startStep: 100,
+      ),
+      DisturbancePreset(
+        name: 'impulse_small',
+        displayName: 'インパルス外乱（小）',
+        type: DisturbanceType.impulse,
+        amplitude: 0.3,
+        startStep: 50,
+      ),
+      DisturbancePreset(
+        name: 'impulse_large',
+        displayName: 'インパルス外乱（大）',
+        type: DisturbanceType.impulse,
+        amplitude: 1.0,
+        startStep: 100,
+      ),
+      DisturbancePreset(
+        name: 'sinusoid_slow',
+        displayName: '正弦波（低周波）',
+        type: DisturbanceType.sinusoid,
+        amplitude: 0.2,
+        omega: 0.05,
+        phase: 0.0,
+      ),
+      DisturbancePreset(
+        name: 'sinusoid_mid',
+        displayName: '正弦波（中周波）',
+        type: DisturbanceType.sinusoid,
+        amplitude: 0.2,
+        omega: 0.2,
+        phase: 0.0,
+      ),
+      DisturbancePreset(
+        name: 'sinusoid_fast',
+        displayName: '正弦波（高周波）',
+        type: DisturbanceType.sinusoid,
+        amplitude: 0.15,
+        omega: 0.5,
+        phase: 0.0,
+      ),
+      DisturbancePreset(
+        name: 'noise_small',
+        displayName: 'ガウス雑音（小）',
+        type: DisturbanceType.noise,
+        noiseStdDev: 0.03,
+        noiseSeed: 42,
+      ),
+      DisturbancePreset(
+        name: 'noise_mid',
+        displayName: 'ガウス雑音（中）',
+        type: DisturbanceType.noise,
+        noiseStdDev: 0.05,
+        noiseSeed: 42,
+      ),
+      DisturbancePreset(
+        name: 'noise_large',
+        displayName: 'ガウス雑音（大）',
+        type: DisturbanceType.noise,
+        noiseStdDev: 0.1,
+        noiseSeed: 42,
+      ),
+    ];
+  }
+
+  /// プリセットを適用
+  void applyDisturbancePreset(String presetName) {
+    final preset = getAvailablePresets().firstWhere(
+      (p) => p.name == presetName,
+      orElse: () => getAvailablePresets().first,
+    );
+    disturbance = preset.toDisturbance();
+    _currentPresetName = preset.displayName;
   }
 
   Disturbance _createDefaultDisturbance(DisturbanceType type) {
@@ -221,9 +387,11 @@ class Simulator {
   void reset() {
     plant.reset();
     pidController.reset();
+    disturbance?.reset();
     _controlInput = 0.0;
     _halted = false;
     stepCount = 0;
+    _currentPresetName = 'なし';
     historyTarget.clear();
     historyOutput.clear();
     historyControl.clear();

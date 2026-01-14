@@ -35,13 +35,30 @@ ui/              → Flutter widgets (main_screen, plot)
 - Both implement `PlantModel` interface for abstraction
 - Plant switch resets all history (simulation restart needed for UI consistency)
 
-### Disturbance Module
+### Disturbance Module & Presets
 
 `Disturbance` class generates input disturbances for testing control robustness:
 - `DisturbanceType`: none | step | impulse | sinusoid | noise
-- Set via `Simulator.setDisturbanceType(type)` which creates default parameters
 - Applied in `Simulator.step()`: `plant.step(_controlInput + disturbance.next())`
-- Useful for testing PID response to external shocks
+
+**Disturbance Presets** (v2.0+): `DisturbancePreset` class with 12 predefined scenarios:
+- **none**: No disturbance (baseline testing)
+- **step_early/mid/large**: Step disturbances at different timings (10/100 steps) and amplitudes (0.2/0.5)
+- **impulse_small/large**: Single impulse disturbances (amplitude 0.3/1.0 at step 50/100)
+- **sinusoid_slow/mid/fast**: Sinusoidal disturbances (omega 0.05/0.2/0.5 rad/step, amplitude 0.15–0.2)
+- **noise_small/mid/large**: Gaussian noise (stddev 0.03/0.05/0.1, seed 42 for reproducibility)
+
+Usage:
+```dart
+// Apply preset
+sim.applyDisturbancePreset('noise_mid');  // Uses preset parameters
+List<DisturbancePreset> presets = Simulator.getAvailablePresets();  // Get all 12 presets
+
+// Custom disturbance (overrides preset)
+sim.setDisturbanceType(DisturbanceType.sinusoid);  // Resets to default params
+```
+
+**Key**: Presets use fixed random seeds (42) for noise to ensure reproducibility across runs.
 
 ## Development Workflow
 
