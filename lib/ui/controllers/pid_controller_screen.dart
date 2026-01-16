@@ -19,13 +19,7 @@ class PIDControllerScreen extends StatefulWidget {
 class _PIDControllerScreenState extends State<PIDControllerScreen> {
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [_buildPIDGainsSection()],
-      ),
-    );
+    return _buildPIDGainsSection();
   }
 
   /// PIDゲイン調整セクション

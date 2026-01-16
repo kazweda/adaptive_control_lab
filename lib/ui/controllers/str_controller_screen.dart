@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../simulation/simulator.dart';
 
 /// STR制御器の設定画面（プレースホルダー）
-class STRControllerScreen extends StatefulWidget {
+class STRControllerScreen extends StatelessWidget {
   final Simulator simulator;
   final VoidCallback onUpdate;
 
@@ -12,11 +12,6 @@ class STRControllerScreen extends StatefulWidget {
     required this.onUpdate,
   });
 
-  @override
-  State<STRControllerScreen> createState() => _STRControllerScreenState();
-}
-
-class _STRControllerScreenState extends State<STRControllerScreen> {
   @override
   Widget build(BuildContext context) {
     return const Center(
