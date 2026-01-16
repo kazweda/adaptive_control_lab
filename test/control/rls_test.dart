@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:adaptive_control_lab/control/rls.dart';
 import 'package:adaptive_control_lab/control/plant.dart';
@@ -123,7 +124,7 @@ void main() {
         // 100ステップ実行
         for (int k = 0; k < 100; k++) {
           // 正弦波入力
-          final u = 0.5 + 0.5 * Math.sin(2 * Math.pi * k / 20);
+          final u = 0.5 + 0.5 * sin(2 * pi * k / 20);
           final y = plant.step(u);
 
           if (k > 0) {

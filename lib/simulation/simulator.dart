@@ -529,9 +529,9 @@ class Simulator {
   void setRlsLambda(double lambda) {
     rlsLambda = lambda;
     if (rlsEnabled && rls != null) {
-      // 既存RLSインスタンスの忘却係数を更新
-      // RLSクラスにlambdaのセッターが必要（次のコミットで追加）
-      _initializeRls(); // 現在は再生成で対応
+      // 忘却係数の変更はコンストラクタの検証ロジックを維持するため
+      // RLSインスタンスを再生成して反映する
+      _initializeRls();
     }
   }
 

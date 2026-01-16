@@ -19,6 +19,7 @@ class SecondOrderPlant implements PlantModel {
   // 状態変数（過去の値を保持）
   double _output = 0.0; // y(k): 現在の出力
   double _prevOutput = 0.0; // y(k-1): ひとつ前の出力
+  double _prevPrevOutput = 0.0; // y(k-2): ふたつ前の出力
   double _prevInput = 0.0; // u(k-1): ひとつ前の入力
   double _prevPrevInput = 0.0; // u(k-2): ふたつ前の入力
 
@@ -36,7 +37,7 @@ class SecondOrderPlant implements PlantModel {
   double get output => _output;
 
   /// 前々出力 y(k-2)（RLSのphi構築用）
-  double get previousPreviousOutput => _prevOutput;
+  double get previousPreviousOutput => _prevPrevOutput;
 
   /// 前々入力 u(k-2)（RLSのphi構築用）
   double get previousPreviousInput => _prevPrevInput;
@@ -57,6 +58,7 @@ class SecondOrderPlant implements PlantModel {
     final newOutput = a1 * yK1 + a2 * yK2 + b1 * uK1 + b2 * uK2;
 
     // 状態更新（更新順序に注意）
+    _prevPrevOutput = _prevOutput; // y(k-2) を y(k-3) へシフト
     _prevOutput = yK1; // 現在の y(k-1) を y(k-2) へシフト
     _output = newOutput; // 新しい y(k)
     _prevPrevInput = _prevInput; // 入力履歴のシフト
@@ -70,6 +72,7 @@ class SecondOrderPlant implements PlantModel {
   void reset() {
     _output = 0.0;
     _prevOutput = 0.0;
+    _prevPrevOutput = 0.0;
     _prevInput = 0.0;
     _prevPrevInput = 0.0;
   }
