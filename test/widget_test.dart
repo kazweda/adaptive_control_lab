@@ -112,4 +112,40 @@ void main() {
     await tester.pump();
     expect(find.text('全履歴'), findsOneWidget);
   });
+
+  testWidgets('コントローラー選択タブが表示され切り替えができる', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1.0;
+
+    await tester.pumpWidget(const MyApp());
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    // PIDとSTRのセグメントボタンが表示される
+    expect(find.text('PID制御'), findsOneWidget);
+    expect(find.text('STR制御'), findsOneWidget);
+
+    // 初期状態ではPIDが選択されている（PIDゲイン調整が表示される）
+    expect(find.text('PID ゲイン調整'), findsOneWidget);
+
+    // STRタブをタップ
+    await tester.tap(find.text('STR制御'));
+    await tester.pump();
+
+    // STR画面のプレースホルダーテキストが表示される
+    expect(find.text('STR制御器設定画面\n（今後実装予定）'), findsOneWidget);
+
+    // PIDゲイン調整は表示されない
+    expect(find.text('PID ゲイン調整'), findsNothing);
+
+    // PIDタブに戻す
+    await tester.tap(find.text('PID制御'));
+    await tester.pump();
+
+    // PIDゲイン調整が再び表示される
+    expect(find.text('PID ゲイン調整'), findsOneWidget);
+  });
 }

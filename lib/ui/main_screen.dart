@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../simulation/simulator.dart';
 import '../control/disturbance.dart';
 import 'plot.dart';
+import 'controllers/pid_controller_screen.dart';
+import 'controllers/str_controller_screen.dart';
 import 'dart:async';
 
 /// メイン画面UI
@@ -17,6 +19,7 @@ class _MainScreenState extends State<MainScreen> {
   Timer? simulationTimer;
   bool isRunning = false;
   int? _chartWindow = 200; // 200/500/1000/全履歴(null)
+  int _selectedControllerIndex = 0; // 0: PID, 1: STR
 
   @override
   void initState() {
@@ -140,8 +143,12 @@ class _MainScreenState extends State<MainScreen> {
               _buildTargetValueSection(),
               const SizedBox(height: 24),
 
-              // === PIDゲイン調整 ===
-              _buildPIDGainsSection(),
+              // === コントローラー選択タブ ===
+              _buildControllerSelector(),
+              const SizedBox(height: 16),
+
+              // === コントローラー設定画面 ===
+              _buildControllerScreen(),
               const SizedBox(height: 24),
 
               // === プラントパラメータ調整 ===
@@ -436,101 +443,43 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  /// PIDゲイン調整セクション
-  Widget _buildPIDGainsSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'PID ゲイン調整',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            // Kp（比例ゲイン）
-            _buildGainSlider(
-              label: 'Kp（比例）',
-              value: simulator.pidKp,
-              onChanged: (value) {
-                setState(() {
-                  simulator.pidKp = value;
-                });
-              },
-              description: '素早く反応する程度',
-            ),
-            const SizedBox(height: 16),
-
-            // Ki（積分ゲイン）
-            _buildGainSlider(
-              label: 'Ki（積分）',
-              value: simulator.pidKi,
-              onChanged: (value) {
-                setState(() {
-                  simulator.pidKi = value;
-                });
-              },
-              description: 'ズレを直す強さ',
-            ),
-            const SizedBox(height: 16),
-
-            // Kd（微分ゲイン）
-            _buildGainSlider(
-              label: 'Kd（微分）',
-              value: simulator.pidKd,
-              onChanged: (value) {
-                setState(() {
-                  simulator.pidKd = value;
-                });
-              },
-              description: '揺れを抑える程度',
-            ),
-          ],
+  /// コントローラー選択タブ
+  Widget _buildControllerSelector() {
+    return SegmentedButton<int>(
+      segments: const [
+        ButtonSegment<int>(
+          value: 0,
+          label: Text('PID制御'),
+          icon: Icon(Icons.tune),
         ),
-      ),
+        ButtonSegment<int>(
+          value: 1,
+          label: Text('STR制御'),
+          icon: Icon(Icons.auto_graph),
+        ),
+      ],
+      selected: {_selectedControllerIndex},
+      onSelectionChanged: (Set<int> newSelection) {
+        setState(() {
+          _selectedControllerIndex = newSelection.first;
+        });
+      },
     );
   }
 
-  /// ゲインスライダーのヘルパーウィジェット
-  Widget _buildGainSlider({
-    required String label,
-    required double value,
-    required ValueChanged<double> onChanged,
-    required String description,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              value.toStringAsFixed(3),
-              style: const TextStyle(fontSize: 13),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          description,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        Slider(
-          value: value,
-          min: 0.0,
-          max: 1.0,
-          divisions: 100,
-          onChanged: onChanged,
-        ),
-      ],
-    );
+  /// コントローラー設定画面（PIDまたはSTR）
+  Widget _buildControllerScreen() {
+    if (_selectedControllerIndex == 0) {
+      return PIDControllerScreen(
+        simulator: simulator,
+        onUpdate: () => setState(() {}),
+      );
+    } else {
+      return STRControllerScreen(
+        simulator: simulator,
+        onUpdate: () => setState(() {}),
+      );
+    }
   }
 
   /// プラントパラメータ調整セクション
