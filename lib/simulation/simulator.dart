@@ -3,6 +3,7 @@ import '../control/second_order_plant.dart';
 import '../control/plant_model.dart';
 import '../control/disturbance.dart';
 import '../control/pid.dart';
+import '../control/rls.dart';
 
 /// 外乱プリセットの定義
 class DisturbancePreset {
@@ -74,6 +75,11 @@ class Simulator {
   late PIDController pidController;
   Disturbance? disturbance;
 
+  // RLS（適応パラメータ推定）
+  RLS? rls;
+  bool rlsEnabled = false;
+  double rlsLambda = 0.98;
+
   // プラント切替（1次/2次）
   bool _useSecondOrderPlant = false;
 
@@ -87,6 +93,14 @@ class Simulator {
   List<double> historyTarget = [];
   List<double> historyOutput = [];
   List<double> historyControl = [];
+
+  // RLS推定値履歴（適応制御評価用）
+  List<double> historyEstimatedA = [];
+  List<double> historyEstimatedB = [];
+  List<double> historyEstimatedA1 = [];
+  List<double> historyEstimatedA2 = [];
+  List<double> historyEstimatedB1 = [];
+  List<double> historyEstimatedB2 = [];
 
   // 制御入力の保持（UI表示用）
   double _controlInput = 0.0;
@@ -121,6 +135,24 @@ class Simulator {
 
   /// 現在のプリセット名
   String get currentPresetName => _currentPresetName;
+
+  // === RLS推定値のゲッター ===
+
+  /// 1次プラント用の推定値（RLS無効時は真値を返す）
+  double get estimatedA =>
+      rlsEnabled && rls != null ? rls!.estimatedA : plantParamA;
+  double get estimatedB =>
+      rlsEnabled && rls != null ? rls!.estimatedB : plantParamB;
+
+  /// 2次プラント用の推定値（RLS無効時は真値を返す）
+  double get estimatedA1 =>
+      rlsEnabled && rls != null ? rls!.estimatedA1 : plantParamA1;
+  double get estimatedA2 =>
+      rlsEnabled && rls != null ? rls!.estimatedA2 : plantParamA2;
+  double get estimatedB1 =>
+      rlsEnabled && rls != null ? rls!.estimatedB1 : plantParamB1;
+  double get estimatedB2 =>
+      rlsEnabled && rls != null ? rls!.estimatedB2 : plantParamB2;
 
   // === 外乱のアクセサ ===
   DisturbanceType get disturbanceType =>
@@ -324,6 +356,8 @@ class Simulator {
       plant = Plant(a: 0.8, b: 0.5);
       pidController = _createFirstOrderDefaultPid();
     }
+    // RLSインスタンスも再生成（パラメータ数に応じて）
+    _initializeRls();
     // 既存履歴はクリア（整合性のため）
     reset();
   }
@@ -356,9 +390,33 @@ class Simulator {
       return;
     }
 
+    // RLS更新前の状態を保存（phi構築用）
+    final prevOutput = plant.output;
+    final prevInput = _controlInput;
+
     // プラントを更新
     final d = disturbance?.next() ?? 0.0; // 入力外乱を加算（最小統合）
     plant.step(_controlInput + d);
+
+    // RLS更新（プラント更新後に実行 → 新しいy(k)を観測）
+    if (rlsEnabled && rls != null) {
+      final List<double> phi;
+      if (_useSecondOrderPlant) {
+        // 2次プラント: φ = [y(k-1), y(k-2), u(k-1), u(k-2)]
+        // SecondOrderPlantから前々値を取得
+        final p = plant as SecondOrderPlant;
+        phi = [
+          prevOutput,
+          p.previousPreviousOutput,
+          prevInput,
+          p.previousPreviousInput,
+        ];
+      } else {
+        // 1次プラント: φ = [y(k-1), u(k-1)]
+        phi = [prevOutput, prevInput];
+      }
+      rls!.update(phi, plant.output);
+    }
 
     // stepCountをインクリメント（出力チェック前に実施）
     stepCount++;
@@ -375,11 +433,35 @@ class Simulator {
     historyOutput.add(plant.output);
     historyControl.add(_controlInput);
 
+    // RLS推定値履歴に追加
+    if (rlsEnabled && rls != null) {
+      if (_useSecondOrderPlant) {
+        historyEstimatedA1.add(rls!.estimatedA1);
+        historyEstimatedA2.add(rls!.estimatedA2);
+        historyEstimatedB1.add(rls!.estimatedB1);
+        historyEstimatedB2.add(rls!.estimatedB2);
+      } else {
+        historyEstimatedA.add(rls!.estimatedA);
+        historyEstimatedB.add(rls!.estimatedB);
+      }
+    }
+
     // 履歴が大きくなりすぎないようにトリミング（最大 maxHistoryLength）
     if (historyTarget.length > maxHistoryLength) {
       historyTarget.removeAt(0);
       historyOutput.removeAt(0);
       historyControl.removeAt(0);
+      if (rlsEnabled) {
+        if (_useSecondOrderPlant) {
+          historyEstimatedA1.removeAt(0);
+          historyEstimatedA2.removeAt(0);
+          historyEstimatedB1.removeAt(0);
+          historyEstimatedB2.removeAt(0);
+        } else {
+          historyEstimatedA.removeAt(0);
+          historyEstimatedB.removeAt(0);
+        }
+      }
     }
   }
 
@@ -388,6 +470,7 @@ class Simulator {
     plant.reset();
     pidController.reset();
     disturbance?.reset();
+    rls?.reset();
     _controlInput = 0.0;
     _halted = false;
     stepCount = 0;
@@ -395,6 +478,12 @@ class Simulator {
     historyTarget.clear();
     historyOutput.clear();
     historyControl.clear();
+    historyEstimatedA.clear();
+    historyEstimatedB.clear();
+    historyEstimatedA1.clear();
+    historyEstimatedA2.clear();
+    historyEstimatedB1.clear();
+    historyEstimatedB2.clear();
   }
 
   PIDController _createFirstOrderDefaultPid() {
@@ -405,6 +494,45 @@ class Simulator {
   PIDController _createSecondOrderDefaultPid() {
     // 2次プラントはより抑えめのゲインで初期化（発散防止）
     return PIDController(kp: 0.12, ki: 0.02, kd: 0.04);
+  }
+
+  /// RLSインスタンスを初期化（プラント次数に応じて）
+  void _initializeRls() {
+    if (!rlsEnabled) {
+      rls = null;
+      return;
+    }
+    final paramCount = _useSecondOrderPlant ? 4 : 2;
+    rls = RLS(
+      parameterCount: paramCount,
+      lambda: rlsLambda,
+      initialCovarianceScale: 1000.0,
+    );
+  }
+
+  /// RLS有効化/無効化（UIからの切替）
+  void setRlsEnabled(bool enabled) {
+    rlsEnabled = enabled;
+    _initializeRls();
+    if (!enabled) {
+      // RLS無効時は推定履歴もクリア
+      historyEstimatedA.clear();
+      historyEstimatedB.clear();
+      historyEstimatedA1.clear();
+      historyEstimatedA2.clear();
+      historyEstimatedB1.clear();
+      historyEstimatedB2.clear();
+    }
+  }
+
+  /// 忘却係数を変更（RLSが有効な場合のみ適用）
+  void setRlsLambda(double lambda) {
+    rlsLambda = lambda;
+    if (rlsEnabled && rls != null) {
+      // 既存RLSインスタンスの忘却係数を更新
+      // RLSクラスにlambdaのセッターが必要（次のコミットで追加）
+      _initializeRls(); // 現在は再生成で対応
+    }
   }
 
   /// 現在の状態を取得（デバッグ用）
