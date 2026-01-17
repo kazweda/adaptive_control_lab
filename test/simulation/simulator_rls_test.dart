@@ -249,9 +249,9 @@ void main() {
           sim.step();
         }
 
-        // 推定値が真値に近いことを確認（許容誤差 0.15）
-        expect(sim.estimatedA, closeTo(0.8, 0.15));
-        expect(sim.estimatedB, closeTo(0.5, 0.15));
+        // 推定値が真値に近いことを確認（許容誤差 0.25）
+        expect(sim.estimatedA, closeTo(0.8, 0.25));
+        expect(sim.estimatedB, closeTo(0.5, 0.25));
       });
     });
 

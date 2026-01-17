@@ -19,6 +19,7 @@ Flutter を用いた **制御系シミュレーション・可視化アプリ**�
 
 - **[開発手順ガイド](docs/DEVELOPMENT.md)** - 開発フロー、PR作成手順
 - **[コード品質ポリシー](docs/QUALITY_POLICY.md)** - テスト、リファクタリング基準
+- **[評価シナリオ](docs/EVALUATION_SCENARIOS.md)** - 制御性能を理解するための実験パターン集
 
 ---
 
@@ -121,6 +122,18 @@ Timer.periodic(const Duration(milliseconds: 50), (_) {
 - Estimated parameters (STR)
 
 STR の適応過程が視覚的に確認できることを重視する。
+
+---
+
+## 🧪 評価シナリオ
+
+PID制御とSTRの性能を比較するための実験シナリオを用意しています。
+
+- 成功パターン / 失敗パターンの典型例
+- 外乱応答プリセット（ステップ、インパルス、サイン波、ノイズ）
+- 1次系・2次系の代表的なパラメータセット
+
+詳細は **[評価シナリオドキュメント](docs/EVALUATION_SCENARIOS.md)** を参照してください。
 
 ---
 
