@@ -458,8 +458,24 @@ class Simulator {
     final d = disturbance?.next() ?? 0.0; // 入力外乱を加算（最小統合）
     plant.step(_controlInput + d);
 
-    // RLS更新（STR無効時のみ、STR有効時はSTR内部で実施）
-    if (!strEnabled && rlsEnabled && rls != null) {
+    // RLS更新（STR有効時はstr.rls、無効時はスタンドアロンrls）
+    if (strEnabled && str != null) {
+      // STR有効時：STR内部のRLSを更新
+      final List<double> phi;
+      if (_useSecondOrderPlant) {
+        final p = plant as SecondOrderPlant;
+        phi = [
+          prevOutput,
+          p.previousPreviousOutput,
+          prevInput,
+          p.previousPreviousInput,
+        ];
+      } else {
+        phi = [prevOutput, prevInput];
+      }
+      str!.rls.update(phi, plant.output);
+    } else if (rlsEnabled && rls != null) {
+      // RLS単独有効時：スタンドアロンRLSを更新
       final List<double> phi;
       if (_useSecondOrderPlant) {
         final p = plant as SecondOrderPlant;
