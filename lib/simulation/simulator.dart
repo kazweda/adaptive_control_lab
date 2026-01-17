@@ -4,6 +4,7 @@ import '../control/plant_model.dart';
 import '../control/disturbance.dart';
 import '../control/pid.dart';
 import '../control/rls.dart';
+import '../control/str.dart';
 
 /// 外乱プリセットの定義
 class DisturbancePreset {
@@ -80,6 +81,12 @@ class Simulator {
   bool rlsEnabled = false;
   double rlsLambda = 0.98;
 
+  // STR（自己調整制御）
+  STR? str;
+  bool strEnabled = false;
+  double strTargetPole1 = 0.5;
+  double strTargetPole2 = 0.3;
+
   // プラント切替（1次/2次）
   bool _useSecondOrderPlant = false;
 
@@ -138,21 +145,67 @@ class Simulator {
 
   // === RLS推定値のゲッター ===
 
-  /// 1次プラント用の推定値（RLS無効時は真値を返す）
-  double get estimatedA =>
-      rlsEnabled && rls != null ? rls!.estimatedA : plantParamA;
-  double get estimatedB =>
-      rlsEnabled && rls != null ? rls!.estimatedB : plantParamB;
+  /// 1次プラント用の推定値（RLS/STR無効時は真値を返す）
+  double get estimatedA {
+    if (strEnabled && str != null) {
+      return str!.estimatedA;
+    }
+    if (rlsEnabled && rls != null) {
+      return rls!.estimatedA;
+    }
+    return plantParamA;
+  }
 
-  /// 2次プラント用の推定値（RLS無効時は真値を返す）
-  double get estimatedA1 =>
-      rlsEnabled && rls != null ? rls!.estimatedA1 : plantParamA1;
-  double get estimatedA2 =>
-      rlsEnabled && rls != null ? rls!.estimatedA2 : plantParamA2;
-  double get estimatedB1 =>
-      rlsEnabled && rls != null ? rls!.estimatedB1 : plantParamB1;
-  double get estimatedB2 =>
-      rlsEnabled && rls != null ? rls!.estimatedB2 : plantParamB2;
+  double get estimatedB {
+    if (strEnabled && str != null) {
+      return str!.estimatedB;
+    }
+    if (rlsEnabled && rls != null) {
+      return rls!.estimatedB;
+    }
+    return plantParamB;
+  }
+
+  /// 2次プラント用の推定値（RLS/STR無効時は真値を返す）
+  double get estimatedA1 {
+    if (strEnabled && str != null) {
+      return str!.estimatedA1;
+    }
+    if (rlsEnabled && rls != null) {
+      return rls!.estimatedA1;
+    }
+    return plantParamA1;
+  }
+
+  double get estimatedA2 {
+    if (strEnabled && str != null) {
+      return str!.estimatedA2;
+    }
+    if (rlsEnabled && rls != null) {
+      return rls!.estimatedA2;
+    }
+    return plantParamA2;
+  }
+
+  double get estimatedB1 {
+    if (strEnabled && str != null) {
+      return str!.estimatedB1;
+    }
+    if (rlsEnabled && rls != null) {
+      return rls!.estimatedB1;
+    }
+    return plantParamB1;
+  }
+
+  double get estimatedB2 {
+    if (strEnabled && str != null) {
+      return str!.estimatedB2;
+    }
+    if (rlsEnabled && rls != null) {
+      return rls!.estimatedB2;
+    }
+    return plantParamB2;
+  }
 
   // === 外乱のアクセサ ===
   DisturbanceType get disturbanceType =>
@@ -358,6 +411,8 @@ class Simulator {
     }
     // RLSインスタンスも再生成（パラメータ数に応じて）
     _initializeRls();
+    // STRインスタンスも再生成（パラメータ数に応じて）
+    _initializeStr();
     // 既存履歴はクリア（整合性のため）
     reset();
   }
@@ -380,8 +435,13 @@ class Simulator {
     // 誤差を計算
     final error = targetValue - plant.output;
 
-    // PID制御器で制御入力を計算
-    _controlInput = pidController.compute(error);
+    // 制御入力を計算（STR優先、その次RLS無効時はPID）
+    if (strEnabled && str != null) {
+      _controlInput = str!.computeControl(plant.output, targetValue);
+    } else {
+      // PID制御器で制御入力を計算
+      _controlInput = pidController.compute(error);
+    }
 
     // 制御入力が安全上限を超えたら停止（プラント更新前に中断）
     if (_controlInput.abs() > maxControlInputAbs) {
@@ -390,7 +450,7 @@ class Simulator {
       return;
     }
 
-    // RLS更新前の状態を保存（phi構築用）
+    // プラント更新前の過去値を保存（RLS更新用）
     final prevOutput = plant.output;
     final prevInput = _controlInput;
 
@@ -398,12 +458,10 @@ class Simulator {
     final d = disturbance?.next() ?? 0.0; // 入力外乱を加算（最小統合）
     plant.step(_controlInput + d);
 
-    // RLS更新（プラント更新後に実行 → 新しいy(k)を観測）
-    if (rlsEnabled && rls != null) {
+    // RLS更新（STR無効時のみ、STR有効時はSTR内部で実施）
+    if (!strEnabled && rlsEnabled && rls != null) {
       final List<double> phi;
       if (_useSecondOrderPlant) {
-        // 2次プラント: φ = [y(k-1), y(k-2), u(k-1), u(k-2)]
-        // SecondOrderPlantから前々値を取得
         final p = plant as SecondOrderPlant;
         phi = [
           prevOutput,
@@ -412,7 +470,6 @@ class Simulator {
           p.previousPreviousInput,
         ];
       } else {
-        // 1次プラント: φ = [y(k-1), u(k-1)]
         phi = [prevOutput, prevInput];
       }
       rls!.update(phi, plant.output);
@@ -471,6 +528,7 @@ class Simulator {
     pidController.reset();
     disturbance?.reset();
     rls?.reset();
+    str?.reset();
     _controlInput = 0.0;
     _halted = false;
     stepCount = 0;
@@ -533,6 +591,51 @@ class Simulator {
       // RLSインスタンスを再生成して反映する
       _initializeRls();
     }
+  }
+
+  /// STR有効化/無効化（UIからの切替）
+  void setStrEnabled(bool enabled) {
+    strEnabled = enabled;
+    _initializeStr();
+    if (!enabled) {
+      // STR無効時は推定履歴もクリア
+      historyEstimatedA.clear();
+      historyEstimatedB.clear();
+      historyEstimatedA1.clear();
+      historyEstimatedA2.clear();
+      historyEstimatedB1.clear();
+      historyEstimatedB2.clear();
+    }
+  }
+
+  /// STRの所望の極を変更
+  void setStrTargetPoles(double p1, double p2) {
+    strTargetPole1 = p1;
+    strTargetPole2 = p2;
+    if (strEnabled && str != null) {
+      str!.setTargetPoles(p1, p2);
+    }
+  }
+
+  /// STRインスタンスを初期化（プラント次数に応じて）
+  void _initializeStr() {
+    if (!strEnabled) {
+      str = null;
+      return;
+    }
+    final paramCount = _useSecondOrderPlant ? 4 : 2;
+    // STRはRLS内部を持つため、新しいRLSインスタンスを作成
+    final strRls = RLS(
+      parameterCount: paramCount,
+      lambda: rlsLambda,
+      initialCovarianceScale: 1000.0,
+    );
+    str = STR(
+      parameterCount: paramCount,
+      rls: strRls,
+      targetPole1: strTargetPole1,
+      targetPole2: strTargetPole2,
+    );
   }
 
   /// 現在の状態を取得（デバッグ用）
