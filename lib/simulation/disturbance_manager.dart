@@ -58,7 +58,31 @@ class DisturbancePreset {
   }
 }
 
-/// 外乱管理の責務を分離（Simulator から委譲）
+/// 外乱管理クラス
+///
+/// Simulator が扱う外乱状態と外乱プリセット選択の責務をこのクラスに委譲します。
+/// 現在有効な [Disturbance] インスタンスと、ユーザーが選択したプリセット名を保持し、
+/// UIからの操作に応じて外乱を切り替えるためのユーティリティを提供します。
+///
+/// ## 役割
+/// - 外乱の現在状態（disturbance）を保持
+/// - 外乱プリセットの一覧（[getAvailablePresets]）を提供
+/// - プリセット名から対応する [DisturbancePreset] を選択し、[Disturbance] を生成
+/// - currentPresetName を更新してUIで選択中のプリセットを表示できるようにする
+///
+/// ## Simulator との関係
+/// Simulator は本クラスのインスタンスを1つ保持し、シミュレーションステップごとに
+/// disturbance?.next() を通じて外乱値を取得します。
+/// 外乱の切り替え（プリセット/カスタム）はすべて DisturbanceManager を経由して行い、
+/// Simulator 本体の責務（制御ループや履歴管理）から外乱ロジックを分離しています。
+///
+/// ## プリセットとカスタム設定の違い
+/// - **プリセット適用**: applyPreset('noise_mid') のようにプリセット名で指定すると、
+///   あらかじめ定義されたパラメータ（振幅、開始ステップ、周波数、ノイズ分散、乱数シードなど）で
+///   Disturbance が再生成されます。再現性のあるシナリオ比較に適しています。
+/// - **カスタム設定**: setType(DisturbanceType.sinusoid) のようにタイプのみを変更する場合、
+///   currentPresetName は 'Custom' に更新され、「プリセットではない状態」を表します。
+///   これによりUIで「プリセット由来の設定」か「手動調整した設定」かを区別できます。
 class DisturbanceManager {
   Disturbance? disturbance;
   String currentPresetName = 'なし';
