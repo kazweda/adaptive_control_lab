@@ -2,67 +2,14 @@ import '../control/plant.dart';
 import '../control/second_order_plant.dart';
 import '../control/plant_model.dart';
 import '../control/disturbance.dart';
-import '../control/pid.dart';
 import '../control/rls.dart';
 import '../control/str.dart';
+import 'disturbance_manager.dart';
+import 'history_manager.dart';
+import 'pid_manager.dart';
 
-/// 外乱プリセットの定義
-class DisturbancePreset {
-  final String name;
-  final String displayName;
-  final DisturbanceType type;
-  final double amplitude;
-  final int startStep;
-  final double omega;
-  final double phase;
-  final double noiseStdDev;
-  final int noiseSeed;
-
-  DisturbancePreset({
-    required this.name,
-    required this.displayName,
-    required this.type,
-    this.amplitude = 0.0,
-    this.startStep = 0,
-    this.omega = 0.0,
-    this.phase = 0.0,
-    this.noiseStdDev = 0.0,
-    this.noiseSeed = 42,
-  });
-
-  /// プリセットから Disturbance を生成
-  Disturbance toDisturbance() {
-    switch (type) {
-      case DisturbanceType.none:
-        return Disturbance(type: DisturbanceType.none);
-      case DisturbanceType.step:
-        return Disturbance(
-          type: DisturbanceType.step,
-          amplitude: amplitude,
-          startStep: startStep,
-        );
-      case DisturbanceType.impulse:
-        return Disturbance(
-          type: DisturbanceType.impulse,
-          amplitude: amplitude,
-          startStep: startStep,
-        );
-      case DisturbanceType.sinusoid:
-        return Disturbance(
-          type: DisturbanceType.sinusoid,
-          amplitude: amplitude,
-          omega: omega,
-          phase: phase,
-        );
-      case DisturbanceType.noise:
-        return Disturbance(
-          type: DisturbanceType.noise,
-          noiseStdDev: noiseStdDev,
-          noiseSeed: noiseSeed,
-        );
-    }
-  }
-}
+// DisturbancePreset はコンポーネント外から参照されるため export
+export 'disturbance_manager.dart' show DisturbancePreset;
 
 /// シミュレーション全体を管理するクラス
 class Simulator {
@@ -73,8 +20,9 @@ class Simulator {
   final double maxControlInputAbs;
   // 制御系のコンポーネント
   late PlantModel plant;
-  late PIDController pidController;
-  Disturbance? disturbance;
+  late PIDManager _pidMgr;
+  late DisturbanceManager _distMgr;
+  late HistoryManager _historyMgr;
 
   // RLS（適応パラメータ推定）
   RLS? rls;
@@ -96,27 +44,11 @@ class Simulator {
   // シミュレーションのステップ数
   int stepCount = 0;
 
-  // データ履歴（グラフ表示用）
-  List<double> historyTarget = [];
-  List<double> historyOutput = [];
-  List<double> historyControl = [];
-
-  // RLS推定値履歴（適応制御評価用）
-  List<double> historyEstimatedA = [];
-  List<double> historyEstimatedB = [];
-  List<double> historyEstimatedA1 = [];
-  List<double> historyEstimatedA2 = [];
-  List<double> historyEstimatedB1 = [];
-  List<double> historyEstimatedB2 = [];
-
   // 制御入力の保持（UI表示用）
   double _controlInput = 0.0;
 
   // 発散検知（制限超過でシミュレーションを停止）
   bool _halted = false;
-
-  // 現在適用中のプリセット名
-  String _currentPresetName = 'None';
 
   /// コンストラクタ
   Simulator({
@@ -125,8 +57,9 @@ class Simulator {
     this.maxControlInputAbs = 10.0,
   }) {
     plant = Plant(a: 0.8, b: 0.5);
-    pidController = _createFirstOrderDefaultPid();
-    disturbance = Disturbance(type: DisturbanceType.none);
+    _pidMgr = PIDManager(PIDManager.createFirstOrderDefault());
+    _distMgr = DisturbanceManager();
+    _historyMgr = HistoryManager(maxLength: maxHistoryLength);
   }
 
   // === ゲッター ===
@@ -140,8 +73,17 @@ class Simulator {
   /// 発散検知フラグ（制限値超過で true）
   bool get isHalted => _halted;
 
-  /// 現在のプリセット名
-  String get currentPresetName => _currentPresetName;
+  // === 履歴アクセス用のゲッター（UI互換性維持） ===
+
+  List<double> get historyTarget => _historyMgr.target;
+  List<double> get historyOutput => _historyMgr.output;
+  List<double> get historyControl => _historyMgr.control;
+  List<double> get historyEstimatedA => _historyMgr.estimatedA;
+  List<double> get historyEstimatedB => _historyMgr.estimatedB;
+  List<double> get historyEstimatedA1 => _historyMgr.estimatedA1;
+  List<double> get historyEstimatedA2 => _historyMgr.estimatedA2;
+  List<double> get historyEstimatedB1 => _historyMgr.estimatedB1;
+  List<double> get historyEstimatedB2 => _historyMgr.estimatedB2;
 
   // === RLS推定値のゲッター ===
 
@@ -207,145 +149,20 @@ class Simulator {
     return plantParamB2;
   }
 
-  // === 外乱のアクセサ ===
-  DisturbanceType get disturbanceType =>
-      disturbance?.type ?? DisturbanceType.none;
-  void setDisturbanceType(DisturbanceType type) {
-    disturbance = _createDefaultDisturbance(type);
-    _currentPresetName = 'Custom';
-  }
+  // === 外乱のアクセサ（API互換性を維持） ===
+  DisturbanceType get disturbanceType => _distMgr.getType();
+  void setDisturbanceType(DisturbanceType type) => _distMgr.setType(type);
+
+  String get currentPresetName => _distMgr.currentPresetName;
 
   /// プリセット一覧を取得
   static List<DisturbancePreset> getAvailablePresets() {
-    return [
-      DisturbancePreset(
-        name: 'none',
-        displayName: 'なし',
-        type: DisturbanceType.none,
-      ),
-      DisturbancePreset(
-        name: 'step_early',
-        displayName: 'ステップ外乱（早期）',
-        type: DisturbanceType.step,
-        amplitude: 0.2,
-        startStep: 10,
-      ),
-      DisturbancePreset(
-        name: 'step_mid',
-        displayName: 'ステップ外乱（中期）',
-        type: DisturbanceType.step,
-        amplitude: 0.2,
-        startStep: 100,
-      ),
-      DisturbancePreset(
-        name: 'step_large',
-        displayName: 'ステップ外乱（大信号）',
-        type: DisturbanceType.step,
-        amplitude: 0.5,
-        startStep: 100,
-      ),
-      DisturbancePreset(
-        name: 'impulse_small',
-        displayName: 'インパルス外乱（小）',
-        type: DisturbanceType.impulse,
-        amplitude: 0.3,
-        startStep: 50,
-      ),
-      DisturbancePreset(
-        name: 'impulse_large',
-        displayName: 'インパルス外乱（大）',
-        type: DisturbanceType.impulse,
-        amplitude: 1.0,
-        startStep: 100,
-      ),
-      DisturbancePreset(
-        name: 'sinusoid_slow',
-        displayName: '正弦波（低周波）',
-        type: DisturbanceType.sinusoid,
-        amplitude: 0.2,
-        omega: 0.05,
-        phase: 0.0,
-      ),
-      DisturbancePreset(
-        name: 'sinusoid_mid',
-        displayName: '正弦波（中周波）',
-        type: DisturbanceType.sinusoid,
-        amplitude: 0.2,
-        omega: 0.2,
-        phase: 0.0,
-      ),
-      DisturbancePreset(
-        name: 'sinusoid_fast',
-        displayName: '正弦波（高周波）',
-        type: DisturbanceType.sinusoid,
-        amplitude: 0.15,
-        omega: 0.5,
-        phase: 0.0,
-      ),
-      DisturbancePreset(
-        name: 'noise_small',
-        displayName: 'ガウス雑音（小）',
-        type: DisturbanceType.noise,
-        noiseStdDev: 0.03,
-        noiseSeed: 42,
-      ),
-      DisturbancePreset(
-        name: 'noise_mid',
-        displayName: 'ガウス雑音（中）',
-        type: DisturbanceType.noise,
-        noiseStdDev: 0.05,
-        noiseSeed: 42,
-      ),
-      DisturbancePreset(
-        name: 'noise_large',
-        displayName: 'ガウス雑音（大）',
-        type: DisturbanceType.noise,
-        noiseStdDev: 0.1,
-        noiseSeed: 42,
-      ),
-    ];
+    return DisturbanceManager.getAvailablePresets();
   }
 
   /// プリセットを適用
   void applyDisturbancePreset(String presetName) {
-    final preset = getAvailablePresets().firstWhere(
-      (p) => p.name == presetName,
-      orElse: () => getAvailablePresets().first,
-    );
-    disturbance = preset.toDisturbance();
-    _currentPresetName = preset.displayName;
-  }
-
-  Disturbance _createDefaultDisturbance(DisturbanceType type) {
-    switch (type) {
-      case DisturbanceType.none:
-        return Disturbance(type: DisturbanceType.none);
-      case DisturbanceType.step:
-        return Disturbance(
-          type: DisturbanceType.step,
-          amplitude: 0.2,
-          startStep: 50,
-        );
-      case DisturbanceType.impulse:
-        return Disturbance(
-          type: DisturbanceType.impulse,
-          amplitude: 0.5,
-          startStep: 30,
-        );
-      case DisturbanceType.sinusoid:
-        return Disturbance(
-          type: DisturbanceType.sinusoid,
-          amplitude: 0.2,
-          omega: 0.2,
-          phase: 0.0,
-        );
-      case DisturbanceType.noise:
-        return Disturbance(
-          type: DisturbanceType.noise,
-          noiseStdDev: 0.05,
-          noiseSeed: 42,
-        );
-    }
+    _distMgr.applyPreset(presetName);
   }
 
   // === プラントパラメータのアクセサ ===
@@ -404,10 +221,10 @@ class Simulator {
     // プラント差し替え（状態はリセットする）
     if (_useSecondOrderPlant) {
       plant = SecondOrderPlant();
-      pidController = _createSecondOrderDefaultPid();
+      _pidMgr = PIDManager(PIDManager.createSecondOrderDefault());
     } else {
       plant = Plant(a: 0.8, b: 0.5);
-      pidController = _createFirstOrderDefaultPid();
+      _pidMgr = PIDManager(PIDManager.createFirstOrderDefault());
     }
     // RLSインスタンスも再生成（パラメータ数に応じて）
     _initializeRls();
@@ -417,16 +234,16 @@ class Simulator {
     reset();
   }
 
-  // === PIDゲインのアクセサ ===
+  // === PIDゲインのアクセサ（API互換性を維持） ===
 
-  double get pidKp => pidController.kp;
-  set pidKp(double value) => pidController.kp = value;
+  double get pidKp => _pidMgr.kp;
+  set pidKp(double value) => _pidMgr.kp = value;
 
-  double get pidKi => pidController.ki;
-  set pidKi(double value) => pidController.ki = value;
+  double get pidKi => _pidMgr.ki;
+  set pidKi(double value) => _pidMgr.ki = value;
 
-  double get pidKd => pidController.kd;
-  set pidKd(double value) => pidController.kd = value;
+  double get pidKd => _pidMgr.kd;
+  set pidKd(double value) => _pidMgr.kd = value;
 
   /// シミュレーションを1ステップ進める
   void step() {
@@ -440,7 +257,7 @@ class Simulator {
       _controlInput = str!.computeControl(plant.output, targetValue);
     } else {
       // PID制御器で制御入力を計算
-      _controlInput = pidController.compute(error);
+      _controlInput = _pidMgr.computeControl(error);
     }
 
     // 制御入力が安全上限を超えたら停止（プラント更新前に中断）
@@ -455,7 +272,7 @@ class Simulator {
     final prevInput = _controlInput;
 
     // プラントを更新
-    final d = disturbance?.next() ?? 0.0; // 入力外乱を加算（最小統合）
+    final d = _distMgr.getNext(); // 外乱マネージャーから外乱値を取得
     plant.step(_controlInput + d);
 
     // RLS更新（STR有効時はstr.rls、無効時はスタンドアロンrls）
@@ -502,38 +319,26 @@ class Simulator {
     }
 
     // データ履歴に追加（halt時は到達しない）
-    historyTarget.add(targetValue);
-    historyOutput.add(plant.output);
-    historyControl.add(_controlInput);
+    _historyMgr.addStep(
+      targetValue: targetValue,
+      outputValue: plant.output,
+      controlValue: _controlInput,
+    );
 
     // RLS推定値履歴に追加
     if (rlsEnabled && rls != null) {
       if (_useSecondOrderPlant) {
-        historyEstimatedA1.add(rls!.estimatedA1);
-        historyEstimatedA2.add(rls!.estimatedA2);
-        historyEstimatedB1.add(rls!.estimatedB1);
-        historyEstimatedB2.add(rls!.estimatedB2);
+        _historyMgr.addSecondOrderEstimates(
+          a1: rls!.estimatedA1,
+          a2: rls!.estimatedA2,
+          b1: rls!.estimatedB1,
+          b2: rls!.estimatedB2,
+        );
       } else {
-        historyEstimatedA.add(rls!.estimatedA);
-        historyEstimatedB.add(rls!.estimatedB);
-      }
-    }
-
-    // 履歴が大きくなりすぎないようにトリミング（最大 maxHistoryLength）
-    if (historyTarget.length > maxHistoryLength) {
-      historyTarget.removeAt(0);
-      historyOutput.removeAt(0);
-      historyControl.removeAt(0);
-      if (rlsEnabled) {
-        if (_useSecondOrderPlant) {
-          historyEstimatedA1.removeAt(0);
-          historyEstimatedA2.removeAt(0);
-          historyEstimatedB1.removeAt(0);
-          historyEstimatedB2.removeAt(0);
-        } else {
-          historyEstimatedA.removeAt(0);
-          historyEstimatedB.removeAt(0);
-        }
+        _historyMgr.addFirstOrderEstimates(
+          a: rls!.estimatedA,
+          b: rls!.estimatedB,
+        );
       }
     }
   }
@@ -541,33 +346,14 @@ class Simulator {
   /// シミュレーションをリセット
   void reset() {
     plant.reset();
-    pidController.reset();
-    disturbance?.reset();
+    _pidMgr.reset();
+    _distMgr.reset();
     rls?.reset();
     str?.reset();
     _controlInput = 0.0;
     _halted = false;
     stepCount = 0;
-    _currentPresetName = 'なし';
-    historyTarget.clear();
-    historyOutput.clear();
-    historyControl.clear();
-    historyEstimatedA.clear();
-    historyEstimatedB.clear();
-    historyEstimatedA1.clear();
-    historyEstimatedA2.clear();
-    historyEstimatedB1.clear();
-    historyEstimatedB2.clear();
-  }
-
-  PIDController _createFirstOrderDefaultPid() {
-    // 1次プラント向けの標準ゲイン
-    return PIDController(kp: 0.3, ki: 0.1, kd: 0.1);
-  }
-
-  PIDController _createSecondOrderDefaultPid() {
-    // 2次プラントはより抑えめのゲインで初期化（発散防止）
-    return PIDController(kp: 0.12, ki: 0.02, kd: 0.04);
+    _historyMgr.clearAll();
   }
 
   /// RLSインスタンスを初期化（プラント次数に応じて）
@@ -590,12 +376,7 @@ class Simulator {
     _initializeRls();
     if (!enabled) {
       // RLS無効時は推定履歴もクリア
-      historyEstimatedA.clear();
-      historyEstimatedB.clear();
-      historyEstimatedA1.clear();
-      historyEstimatedA2.clear();
-      historyEstimatedB1.clear();
-      historyEstimatedB2.clear();
+      _historyMgr.clearRlsEstimates();
     }
   }
 
@@ -615,12 +396,7 @@ class Simulator {
     _initializeStr();
     if (!enabled) {
       // STR無効時は推定履歴もクリア
-      historyEstimatedA.clear();
-      historyEstimatedB.clear();
-      historyEstimatedA1.clear();
-      historyEstimatedA2.clear();
-      historyEstimatedB1.clear();
-      historyEstimatedB2.clear();
+      _historyMgr.clearRlsEstimates();
     }
   }
 
