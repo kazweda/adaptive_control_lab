@@ -130,6 +130,13 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
                 onPressed: () {
                   setState(() {
                     widget.simulator.str?.setTargetPolesButterworth(0.3);
+                    // STR オブジェクトの極を Simulator のプロパティに同期
+                    if (widget.simulator.str != null) {
+                      widget.simulator.setStrTargetPoles(
+                        widget.simulator.str!.targetPole1,
+                        widget.simulator.str!.targetPole2,
+                      );
+                    }
                     widget.onUpdate();
                   });
                 },
