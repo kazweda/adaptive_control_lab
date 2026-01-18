@@ -135,8 +135,8 @@ void main() {
     await tester.tap(find.text('STR制御'));
     await tester.pump();
 
-    // STR画面のプレースホルダーテキストが表示される
-    expect(find.text('STR制御器設定画面\n（今後実装予定）'), findsOneWidget);
+    // STR画面のSTR制御器トグルが表示される
+    expect(find.text('STR制御器'), findsOneWidget);
 
     // PIDゲイン調整は表示されない
     expect(find.text('PID ゲイン調整'), findsNothing);
