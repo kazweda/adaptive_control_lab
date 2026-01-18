@@ -97,7 +97,7 @@ void main() {
       simulator = Simulator();
     });
 
-    testWidgets('プレースホルダーテキストが表示される', (WidgetTester tester) async {
+    testWidgets('STR有効化トグルが表示される', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -106,11 +106,14 @@ void main() {
         ),
       );
 
-      // プレースホルダーテキストが表示される
-      expect(find.text('STR制御器設定画面\n（今後実装予定）'), findsOneWidget);
+      // STR制御器トグルテキストが表示される
+      expect(find.text('STR制御器'), findsOneWidget);
+      // Switchが表示されている
+      expect(find.byType(Switch), findsOneWidget);
     });
 
-    testWidgets('Centerウィジェットで中央配置される', (WidgetTester tester) async {
+    testWidgets('STR有効時に極スライダーが表示される', (WidgetTester tester) async {
+      simulator.setStrEnabled(true);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -119,8 +122,8 @@ void main() {
         ),
       );
 
-      // Centerウィジェットが使われている
-      expect(find.byType(Center), findsOneWidget);
+      // 主極スライダーラベルが表示される
+      expect(find.text('主極（極1）'), findsOneWidget);
     });
   });
 }
