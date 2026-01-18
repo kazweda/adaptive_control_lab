@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import '../simulation/simulator.dart';
-import '../control/disturbance.dart';
 import 'plot.dart';
 import 'controllers/pid_controller_screen.dart';
 import 'controllers/str_controller_screen.dart';
+import 'components/chart_window_selector.dart';
+import 'components/simulation_status_panel.dart';
+import 'components/simulation_control_panel.dart';
+import 'components/target_value_panel.dart';
+import 'components/controller_selector_panel.dart';
+import 'components/disturbance_panel.dart';
+import 'components/plant_params_panel.dart';
 import 'dart:async';
 
 /// メイン画面UI
@@ -32,35 +38,6 @@ class _MainScreenState extends State<MainScreen> {
     // 実行中に All(null) が選ばれている場合は 200 に制限
     if (isRunning && _chartWindow == null) return 200;
     return _chartWindow ?? 200;
-  }
-
-  Widget _buildChartWindowSelector() {
-    const options = [200, 500, 1000, null];
-    String labelOf(int? v) => v == null ? '全履歴' : v.toString();
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          '表示ウィンドウ',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        DropdownButton<int?>(
-          value: _chartWindow,
-          items: options
-              .map(
-                (v) =>
-                    DropdownMenuItem<int?>(value: v, child: Text(labelOf(v))),
-              )
-              .toList(),
-          onChanged: (v) {
-            setState(() {
-              _chartWindow = v;
-            });
-          },
-        ),
-      ],
-    );
   }
 
   @override
@@ -103,370 +80,6 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('制御系シミュレーション'),
-        centerTitle: true,
-        elevation: 2,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // === チャート表示ウィンドウ切替 ===
-              _buildChartWindowSelector(),
-              const SizedBox(height: 8),
-              // === 時系列グラフ ===
-              TimeSeriesPlot(
-                historyTarget: simulator.historyTarget,
-                historyOutput: simulator.historyOutput,
-                historyControl: simulator.historyControl,
-                // 実行中は安全のため All 選択時でも 200 に制限
-                maxDataPoints: _effectiveChartWindow(),
-                isRunning: isRunning,
-              ),
-              const SizedBox(height: 24),
-
-              // === ステータス表示 ===
-              _buildStatusSection(),
-              const SizedBox(height: 24),
-
-              // === 制御ボタン ===
-              _buildControlButtons(),
-              const SizedBox(height: 24),
-
-              // === 目標値調整 ===
-              _buildTargetValueSection(),
-              const SizedBox(height: 24),
-
-              // === コントローラー選択タブ ===
-              _buildControllerSelector(),
-              const SizedBox(height: 16),
-
-              // === コントローラー設定画面 ===
-              _buildControllerScreen(),
-              const SizedBox(height: 24),
-
-              // === プラントパラメータ調整 ===
-              _buildPlantParamsSection(),
-              const SizedBox(height: 24),
-              // === 外乱設定 ===
-              _buildDisturbanceSection(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// ステータス表示セクション
-  Widget _buildStatusSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // 実行状態
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '状態：',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isRunning ? Colors.green : Colors.grey,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    isRunning ? '実行中' : '停止中',
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // 各値の表示
-            _buildValueRow('目標値', simulator.targetValue),
-            const SizedBox(height: 8),
-            _buildValueRow('出力', simulator.plantOutput),
-            const SizedBox(height: 8),
-            _buildValueRow('制御入力', simulator.controlInput),
-            const SizedBox(height: 8),
-            _buildValueRow(
-              'ステップ',
-              simulator.stepCount.toDouble(),
-              isInteger: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 外乱設定（種類選択とプリセットボタン）
-  Widget _buildDisturbanceSection() {
-    final presets = Simulator.getAvailablePresets();
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '外乱設定',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            // 外乱タイプドロップダウン
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '外乱タイプ',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                DropdownButton<DisturbanceType>(
-                  value: simulator.disturbanceType,
-                  items: const [
-                    DropdownMenuItem(
-                      value: DisturbanceType.none,
-                      child: Text('なし'),
-                    ),
-                    DropdownMenuItem(
-                      value: DisturbanceType.step,
-                      child: Text('ステップ'),
-                    ),
-                    DropdownMenuItem(
-                      value: DisturbanceType.impulse,
-                      child: Text('インパルス'),
-                    ),
-                    DropdownMenuItem(
-                      value: DisturbanceType.sinusoid,
-                      child: Text('正弦波'),
-                    ),
-                    DropdownMenuItem(
-                      value: DisturbanceType.noise,
-                      child: Text('雑音'),
-                    ),
-                  ],
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() {
-                      simulator.setDisturbanceType(v);
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 現在のプリセット表示
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'プリセット',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    simulator.currentPresetName,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // プリセットボタングリッド
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: presets.map((preset) {
-                final isActive =
-                    simulator.currentPresetName == preset.displayName;
-                return ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isActive ? Colors.blue : Colors.grey[300],
-                    foregroundColor: isActive ? Colors.white : Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      simulator.applyDisturbancePreset(preset.name);
-                    });
-                  },
-                  child: Text(
-                    preset.displayName,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 値を1行で表示するヘルパー
-  Widget _buildValueRow(String label, double value, {bool isInteger = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text('$label：', style: const TextStyle(fontSize: 14)),
-        Text(
-          isInteger ? value.toInt().toString() : value.toStringAsFixed(3),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
-  /// 制御ボタンセクション
-  Widget _buildControlButtons() {
-    return Row(
-      children: [
-        // スタートボタン
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: isRunning ? null : _startSimulation,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('スタート'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.green,
-              disabledBackgroundColor: Colors.grey,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // ストップボタン
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: isRunning ? _stopSimulation : null,
-            icon: const Icon(Icons.stop),
-            label: const Text('ストップ'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.orange,
-              disabledBackgroundColor: Colors.grey,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // リセットボタン
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _resetSimulation,
-            icon: const Icon(Icons.refresh),
-            label: const Text('リセット'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.red,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 目標値調整セクション
-  Widget _buildTargetValueSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '目標値',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Slider(
-                    value: simulator.targetValue,
-                    min: 0.0,
-                    max: 2.0,
-                    divisions: 40,
-                    label: simulator.targetValue.toStringAsFixed(2),
-                    onChanged: (value) {
-                      setState(() {
-                        simulator.targetValue = value;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  simulator.targetValue.toStringAsFixed(2),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// コントローラー選択タブ
-  Widget _buildControllerSelector() {
-    return SegmentedButton<int>(
-      segments: const [
-        ButtonSegment<int>(
-          value: 0,
-          label: Text('PID制御'),
-          icon: Icon(Icons.tune),
-        ),
-        ButtonSegment<int>(
-          value: 1,
-          label: Text('STR制御'),
-          icon: Icon(Icons.auto_graph),
-        ),
-      ],
-      selected: {_selectedControllerIndex},
-      onSelectionChanged: (Set<int> newSelection) {
-        setState(() {
-          _selectedControllerIndex = newSelection.first;
-        });
-      },
-    );
-  }
-
   /// コントローラー設定画面（PIDまたはSTR）
   Widget _buildControllerScreen() {
     if (_selectedControllerIndex == 0) {
@@ -482,157 +95,138 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  /// プラントパラメータ調整セクション
-  Widget _buildPlantParamsSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'プラント設定（自動制御される対象）',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('制御系シミュレーション'),
+        centerTitle: true,
+        elevation: 2,
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // === チャート表示ウィンドウ切替 ===
+              ChartWindowSelector(
+                chartWindow: _chartWindow,
+                onChanged: (v) {
+                  setState(() {
+                    _chartWindow = v;
+                  });
+                },
+              ),
+              const SizedBox(height: 8),
+              // === 時系列グラフ ===
+              TimeSeriesPlot(
+                historyTarget: simulator.historyTarget,
+                historyOutput: simulator.historyOutput,
+                historyControl: simulator.historyControl,
+                // 実行中は安全のため All 選択時でも 200 に制限
+                maxDataPoints: _effectiveChartWindow(),
+                isRunning: isRunning,
+              ),
+              const SizedBox(height: 24),
 
-            // プラント次数切替
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'プラント次数',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                DropdownButton<bool>(
-                  value: simulator.isSecondOrderPlant,
-                  items: const [
-                    DropdownMenuItem<bool>(value: false, child: Text('1次')),
-                    DropdownMenuItem<bool>(value: true, child: Text('2次')),
-                  ],
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() {
-                      simulator.setPlantOrder(useSecondOrder: v);
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+              // === ステータス表示 ===
+              SimulationStatusPanel(simulator: simulator, isRunning: isRunning),
+              const SizedBox(height: 24),
 
-            if (!simulator.isSecondOrderPlant) ...[
-              // 1次系: a, b
-              _buildPlantParamSlider(
-                label: '慣性の強さ (a)',
-                value: simulator.plantParamA,
+              // === 制御ボタン ===
+              SimulationControlPanel(
+                isRunning: isRunning,
+                onStart: _startSimulation,
+                onStop: _stopSimulation,
+                onReset: _resetSimulation,
+              ),
+              const SizedBox(height: 24),
+
+              // === 目標値調整 ===
+              TargetValuePanel(
+                simulator: simulator,
                 onChanged: (value) {
+                  setState(() {
+                    simulator.targetValue = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // === コントローラー選択タブ ===
+              ControllerSelectorPanel(
+                selectedControllerIndex: _selectedControllerIndex,
+                onChanged: (index) {
+                  setState(() {
+                    _selectedControllerIndex = index;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // === コントローラー設定画面 ===
+              _buildControllerScreen(),
+              const SizedBox(height: 24),
+
+              // === プラントパラメータ調整 ===
+              PlantParamsPanel(
+                simulator: simulator,
+                onPlantOrderChanged: (useSecondOrder) {
+                  setState(() {
+                    simulator.setPlantOrder(useSecondOrder: useSecondOrder);
+                  });
+                },
+                onParamAChanged: (value) {
                   setState(() {
                     simulator.plantParamA = value;
                   });
                 },
-                description: '大きいほど前の値が強く影響',
-              ),
-              const SizedBox(height: 16),
-              _buildPlantParamSlider(
-                label: '応答の敏感さ (b)',
-                value: simulator.plantParamB,
-                onChanged: (value) {
+                onParamBChanged: (value) {
                   setState(() {
                     simulator.plantParamB = value;
                   });
                 },
-                description: '大きいほど入力に敏感に反応',
-              ),
-            ] else ...[
-              // 2次系: a1, a2, b1, b2
-              _buildPlantParamSlider(
-                label: 'フィードバック係数 (a1)',
-                value: simulator.plantParamA1,
-                onChanged: (value) {
+                onParamA1Changed: (value) {
                   setState(() {
                     simulator.plantParamA1 = value;
                   });
                 },
-                description: 'y(k-1) の係数',
-              ),
-              const SizedBox(height: 16),
-              _buildPlantParamSlider(
-                label: 'フィードバック係数 (a2)',
-                value: simulator.plantParamA2,
-                onChanged: (value) {
+                onParamA2Changed: (value) {
                   setState(() {
                     simulator.plantParamA2 = value;
                   });
                 },
-                description: 'y(k-2) の係数',
-              ),
-              const SizedBox(height: 16),
-              _buildPlantParamSlider(
-                label: '入力係数 (b1)',
-                value: simulator.plantParamB1,
-                onChanged: (value) {
+                onParamB1Changed: (value) {
                   setState(() {
                     simulator.plantParamB1 = value;
                   });
                 },
-                description: 'u(k-1) の係数',
-              ),
-              const SizedBox(height: 16),
-              _buildPlantParamSlider(
-                label: '入力係数 (b2)',
-                value: simulator.plantParamB2,
-                onChanged: (value) {
+                onParamB2Changed: (value) {
                   setState(() {
                     simulator.plantParamB2 = value;
                   });
                 },
-                description: 'u(k-2) の係数',
+              ),
+              const SizedBox(height: 24),
+              // === 外乱設定 ===
+              DisturbancePanel(
+                simulator: simulator,
+                onTypeChanged: (type) {
+                  setState(() {
+                    simulator.setDisturbanceType(type);
+                  });
+                },
+                onPresetApplied: (presetName) {
+                  setState(() {
+                    simulator.applyDisturbancePreset(presetName);
+                  });
+                },
               ),
             ],
-          ],
+          ),
         ),
       ),
-    );
-  }
-
-  /// プラントパラメータスライダーのヘルパーウィジェット
-  Widget _buildPlantParamSlider({
-    required String label,
-    required double value,
-    required ValueChanged<double> onChanged,
-    required String description,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              value.toStringAsFixed(3),
-              style: const TextStyle(fontSize: 13),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          description,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        Slider(
-          value: value,
-          min: 0.0,
-          max: 1.0,
-          divisions: 100,
-          onChanged: onChanged,
-        ),
-      ],
     );
   }
 }
