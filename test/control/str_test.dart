@@ -191,5 +191,91 @@ void main() {
         expect(str1.estimatedA, isNot(closeTo(0.8, 0.01)));
       });
     });
+
+    group('オーバーフロー対策 (Issue #37)', () {
+      test('初期段階での制御入力がクリップされる', () {
+        // Issue #37: 初期推定値が不確定な場合、大きな制御入力が発生する
+        // → controlInputLimit でクリップされるべき
+        final rls = RLS(
+          parameterCount: 2,
+          initialTheta: [0.5, 0.3], // 小さなb値
+          initialCovarianceScale: 100.0, // 修正後の値
+        );
+        final str = STR(parameterCount: 2, rls: rls, targetPole1: 0.5);
+
+        const targetValue = 1.0;
+        const plantOutput = 0.0;
+
+        // 複数ステップ計算
+        for (int step = 0; step < 5; step++) {
+          final u = str.computeControl(plantOutput, targetValue);
+
+          // 制御入力は安全上限内
+          expect(u.abs(), lessThanOrEqualTo(str.controlInputLimit));
+
+          // 制御入力は有限（NaN/Infinity ではない）
+          expect(u.isFinite, true);
+
+          // RLS更新
+          str.rls.update([plantOutput, u], plantOutput);
+        }
+      });
+
+      test('制御入力制限がデフォルト値を持つ', () {
+        expect(str1.controlInputLimit, equals(10.0));
+      });
+
+      test('制御入力制限は変更可能', () {
+        str1.controlInputLimit = 5.0;
+        expect(str1.controlInputLimit, equals(5.0));
+
+        // 制御入力は新しい上限でクリップされる
+        final u = str1.computeControl(0.5, 1.0);
+        expect(u.abs(), lessThanOrEqualTo(5.0));
+      });
+
+      test('1次系の初期段階でも安全（大きなb値）', () {
+        // b > 0の場合は通常制御
+        final rls = RLS(
+          parameterCount: 2,
+          initialTheta: [0.5, 1.0], // 十分なb値
+          initialCovarianceScale: 100.0,
+        );
+        final str = STR(parameterCount: 2, rls: rls, targetPole1: 0.5);
+
+        const targetValue = 1.0;
+        const plantOutput = 0.0;
+
+        for (int step = 0; step < 3; step++) {
+          final u = str.computeControl(plantOutput, targetValue);
+          expect(u.isFinite, true);
+          expect(u.abs(), lessThanOrEqualTo(str.controlInputLimit));
+        }
+      });
+
+      test('2次系でもオーバーフロー対策が有効', () {
+        // 2次系でも制御入力がクリップされる
+        final rls = RLS(
+          parameterCount: 4,
+          initialTheta: [0.7, -0.2, 0.3, 0.1],
+          initialCovarianceScale: 100.0,
+        );
+        final str = STR(
+          parameterCount: 4,
+          rls: rls,
+          targetPole1: 0.5,
+          targetPole2: 0.3,
+        );
+
+        const targetValue = 1.0;
+        const plantOutput = 0.0;
+
+        for (int step = 0; step < 5; step++) {
+          final u = str.computeControl(plantOutput, targetValue);
+          expect(u.isFinite, true);
+          expect(u.abs(), lessThanOrEqualTo(str.controlInputLimit));
+        }
+      });
+    });
   });
 }

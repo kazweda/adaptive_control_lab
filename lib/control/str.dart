@@ -9,6 +9,10 @@ class STR {
   double targetPole1; // 所望の極1（1次・2次共通）
   double targetPole2; // 所望の極2（2次のみ）
 
+  /// 制御入力の安全上限（オーバーフロー対策）
+  /// 初期推定値が不確定な場合、大きな制御入力が発生する可能性があるため制限
+  double controlInputLimit = 10.0;
+
   final List<double> _previousOutputs = []; // y(k-1), y(k-2)
   final List<double> _previousInputs = []; // u(k-1), u(k-2)
 
@@ -31,6 +35,7 @@ class STR {
 
   /// 制御入力を計算
   /// y: 現在の出力, r: 目標値（参照信号）
+  /// 返値は安全性のため [-controlInputLimit, controlInputLimit] にクリップされる
   double computeControl(double y, double r) {
     double u;
 
@@ -53,7 +58,10 @@ class STR {
     // 過去値を記録
     _updateHistory(y, u);
 
-    return u;
+    // 制御入力の安全制限（オーバーフロー対策）
+    // 初期的に推定パラメータが不確定なため、大きな制御入力が発生する可能性がある
+    // 最初のステップ付近では慎重に制御する
+    return u.clamp(-controlInputLimit, controlInputLimit);
   }
 
   /// 1次プラント用制御則（極配置）
