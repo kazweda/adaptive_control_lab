@@ -72,6 +72,27 @@ git commit -m "feat: 実装内容
 Implements: #issue番号"
 ```
 
+**日本語を含むコミットメッセージ作成時の注意:**
+
+ターミナルの `-m` フラグに日本語を直接渡すと文字化けする可能性があります。
+
+**推奨方法: ファイルから読み込む**
+```bash
+# コミットメッセージファイルを作成
+cat > /tmp/commit_msg.txt << 'EOF'
+feat: 機能名
+
+- 詳細1
+- 詳細2
+
+Implements: #issue番号
+EOF
+
+# ファイルから読み込んでコミット
+git add .
+git commit -F /tmp/commit_msg.txt
+```
+
 **コミットメッセージ規則:**
 - `feat:` 新機能
 - `fix:` バグ修正
@@ -87,6 +108,34 @@ Implements: #issue番号"
 git push -u origin feature/機能名
 gh pr create --title "feat: 機能名" --body "Implements #issue番号"
 ```
+
+**重要: 日本語を含むPR本文の作成時は、以下の問題に注意してください。**
+
+#### 文字化け問題の回避方法
+
+`--body` フラグに日本語（特にバックスラッシュを含む）を直接渡すと文字化けします。
+
+**推奨方法 1: 英語のみで作成（最も確実）**
+```bash
+gh pr create --title "fix: issue title" --body "Fix details. Fixes #XX"
+```
+
+**推奨方法 2: 本文ファイルを使用（日本語対応）**
+```bash
+# UTF-8ファイルを作成してから
+cat > /tmp/pr_body.txt << 'EOF'
+## 実装内容
+...
+EOF
+
+# ファイルから読み込み
+gh pr create --title "feat: 機能名" --body-file /tmp/pr_body.txt
+```
+
+**推奨方法 3: GitHub UI から直接作成**
+- `git push` 後、ブラウザで GitHub を開く
+- "Compare & pull request" ボタンから作成
+- 日本語フォーム入力で文字化けなし
 
 ### 6. コードレビュー（Copilot）
 

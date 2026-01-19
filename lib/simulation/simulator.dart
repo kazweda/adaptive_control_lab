@@ -363,10 +363,11 @@ class Simulator {
       return;
     }
     final paramCount = _useSecondOrderPlant ? 4 : 2;
+    // initialCovarianceScale を 100.0 に削減（Issue #37 オーバーフロー対策：初期ゲイン暴走を抑制）
     rls = RLS(
       parameterCount: paramCount,
       lambda: rlsLambda,
-      initialCovarianceScale: 1000.0,
+      initialCovarianceScale: 100.0,
     );
   }
 
@@ -417,10 +418,11 @@ class Simulator {
     }
     final paramCount = _useSecondOrderPlant ? 4 : 2;
     // STRはRLS内部を持つため、新しいRLSインスタンスを作成
+    // initialCovarianceScale を 100.0 に削減（オーバーフロー対策）
     final strRls = RLS(
       parameterCount: paramCount,
       lambda: rlsLambda,
-      initialCovarianceScale: 1000.0,
+      initialCovarianceScale: 100.0,
     );
     str = STR(
       parameterCount: paramCount,
