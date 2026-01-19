@@ -363,7 +363,7 @@ class Simulator {
       return;
     }
     final paramCount = _useSecondOrderPlant ? 4 : 2;
-    // initialCovarianceScale を 100.0 に削減（初期学習を適正に調整）
+    // initialCovarianceScale を 100.0 に削減（Issue #37 オーバーフロー対策：初期ゲイン暴走を抑制）
     rls = RLS(
       parameterCount: paramCount,
       lambda: rlsLambda,

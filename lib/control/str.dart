@@ -55,13 +55,15 @@ class STR {
       throw ArgumentError('Unsupported parameter count: $parameterCount');
     }
 
-    // 過去値を記録
-    _updateHistory(y, u);
-
     // 制御入力の安全制限（オーバーフロー対策）
     // 初期的に推定パラメータが不確定なため、大きな制御入力が発生する可能性がある
     // 最初のステップ付近では慎重に制御する
-    return u.clamp(-controlInputLimit, controlInputLimit);
+    final clamped = u.clamp(-controlInputLimit, controlInputLimit).toDouble();
+
+    // 過去値を記録（実際に適用する値で更新する）
+    _updateHistory(y, clamped);
+
+    return clamped;
   }
 
   /// 1次プラント用制御則（極配置）

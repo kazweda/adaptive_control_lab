@@ -204,11 +204,16 @@ void main() {
         final str = STR(parameterCount: 2, rls: rls, targetPole1: 0.5);
 
         const targetValue = 1.0;
-        const plantOutput = 0.0;
+        double y = 0.0;
+        double uPrev = 0.0;
+
+        // シンプルな1次プラントモデル（安定）: y(k) = 0.6*y(k-1) + 0.4*u(k-1)
+        const a = 0.6;
+        const b = 0.4;
 
         // 複数ステップ計算
         for (int step = 0; step < 5; step++) {
-          final u = str.computeControl(plantOutput, targetValue);
+          final u = str.computeControl(y, targetValue);
 
           // 制御入力は安全上限内
           expect(u.abs(), lessThanOrEqualTo(str.controlInputLimit));
@@ -216,8 +221,13 @@ void main() {
           // 制御入力は有限（NaN/Infinity ではない）
           expect(u.isFinite, true);
 
-          // RLS更新
-          str.rls.update([plantOutput, u], plantOutput);
+          // プラントを1ステップ進めてRLSへ供給
+          final nextY = a * y + b * uPrev;
+          str.rls.update([y, uPrev], nextY);
+
+          // 状態更新
+          uPrev = u;
+          y = nextY;
         }
       });
 
@@ -244,12 +254,22 @@ void main() {
         final str = STR(parameterCount: 2, rls: rls, targetPole1: 0.5);
 
         const targetValue = 1.0;
-        const plantOutput = 0.0;
+        double y = 0.0;
+        double uPrev = 0.0;
+
+        // 安定な1次プラント
+        const a = 0.6;
+        const b = 0.5;
 
         for (int step = 0; step < 3; step++) {
-          final u = str.computeControl(plantOutput, targetValue);
+          final u = str.computeControl(y, targetValue);
           expect(u.isFinite, true);
           expect(u.abs(), lessThanOrEqualTo(str.controlInputLimit));
+
+          final nextY = a * y + b * uPrev;
+          str.rls.update([y, uPrev], nextY);
+          uPrev = u;
+          y = nextY;
         }
       });
 
@@ -268,12 +288,30 @@ void main() {
         );
 
         const targetValue = 1.0;
-        const plantOutput = 0.0;
+        double y1 = 0.0; // y(k-1)
+        double y2 = 0.0; // y(k-2)
+        double u1 = 0.0; // u(k-1)
+        double u2 = 0.0; // u(k-2)
+
+        // 安定な2次プラント: y(k) = 0.5*y(k-1) - 0.05*y(k-2) + 0.3*u(k-1) + 0.1*u(k-2)
+        const a1 = 0.5;
+        const a2 = -0.05;
+        const b1 = 0.3;
+        const b2 = 0.1;
 
         for (int step = 0; step < 5; step++) {
-          final u = str.computeControl(plantOutput, targetValue);
+          final u = str.computeControl(y1, targetValue);
           expect(u.isFinite, true);
           expect(u.abs(), lessThanOrEqualTo(str.controlInputLimit));
+
+          final nextY = a1 * y1 + a2 * y2 + b1 * u1 + b2 * u2;
+          str.rls.update([y1, y2, u1, u2], nextY);
+
+          // 状態をシフト
+          y2 = y1;
+          y1 = nextY;
+          u2 = u1;
+          u1 = u;
         }
       });
     });
