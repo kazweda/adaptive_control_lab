@@ -7,6 +7,7 @@ import '../control/str.dart';
 import 'disturbance_manager.dart';
 import 'history_manager.dart';
 import 'pid_manager.dart';
+import 'adaptive_control_manager.dart';
 
 // DisturbancePreset はコンポーネント外から参照されるため export
 export 'disturbance_manager.dart' show DisturbancePreset;
@@ -24,16 +25,7 @@ class Simulator {
   late DisturbanceManager _distMgr;
   late HistoryManager _historyMgr;
 
-  // RLS（適応パラメータ推定）
-  RLS? rls;
-  bool rlsEnabled = false;
-  double rlsLambda = 0.98;
-
-  // STR（自己調整制御）
-  STR? str;
-  bool strEnabled = false;
-  double strTargetPole1 = 0.5;
-  double strTargetPole2 = 0.3;
+  late AdaptiveControlManager _adaptiveMgr;
 
   // プラント切替（1次/2次）
   bool _useSecondOrderPlant = false;
@@ -60,6 +52,9 @@ class Simulator {
     _pidMgr = PIDManager(PIDManager.createFirstOrderDefault());
     _distMgr = DisturbanceManager();
     _historyMgr = HistoryManager(maxLength: maxHistoryLength);
+    _adaptiveMgr = AdaptiveControlManager(
+      useSecondOrderPlant: _useSecondOrderPlant,
+    );
   }
 
   // === ゲッター ===
@@ -86,6 +81,13 @@ class Simulator {
   List<double> get historyEstimatedB2 => _historyMgr.estimatedB2;
 
   // === RLS推定値のゲッター ===
+  bool get rlsEnabled => _adaptiveMgr.rlsEnabled;
+  double get rlsLambda => _adaptiveMgr.rlsLambda;
+  bool get strEnabled => _adaptiveMgr.strEnabled;
+  double get strTargetPole1 => _adaptiveMgr.strTargetPole1;
+  double get strTargetPole2 => _adaptiveMgr.strTargetPole2;
+  RLS? get rls => _adaptiveMgr.rls;
+  STR? get str => _adaptiveMgr.str;
 
   /// 1次プラント用の推定値（RLS/STR無効時は真値を返す）
   double get estimatedA {
@@ -226,10 +228,8 @@ class Simulator {
       plant = Plant(a: 0.8, b: 0.5);
       _pidMgr = PIDManager(PIDManager.createFirstOrderDefault());
     }
-    // RLSインスタンスも再生成（パラメータ数に応じて）
-    _initializeRls();
-    // STRインスタンスも再生成（パラメータ数に応じて）
-    _initializeStr();
+    // RLS/STRインスタンスも再生成（パラメータ数に応じて）
+    _adaptiveMgr.updatePlantOrder(_useSecondOrderPlant);
     // 既存履歴はクリア（整合性のため）
     reset();
   }
@@ -348,33 +348,16 @@ class Simulator {
     plant.reset();
     _pidMgr.reset();
     _distMgr.reset();
-    rls?.reset();
-    str?.reset();
+    _adaptiveMgr.resetControllers();
     _controlInput = 0.0;
     _halted = false;
     stepCount = 0;
     _historyMgr.clearAll();
   }
 
-  /// RLSインスタンスを初期化（プラント次数に応じて）
-  void _initializeRls() {
-    if (!rlsEnabled) {
-      rls = null;
-      return;
-    }
-    final paramCount = _useSecondOrderPlant ? 4 : 2;
-    // initialCovarianceScale を 100.0 に削減（Issue #37 オーバーフロー対策：初期ゲイン暴走を抑制）
-    rls = RLS(
-      parameterCount: paramCount,
-      lambda: rlsLambda,
-      initialCovarianceScale: 100.0,
-    );
-  }
-
   /// RLS有効化/無効化（UIからの切替）
   void setRlsEnabled(bool enabled) {
-    rlsEnabled = enabled;
-    _initializeRls();
+    _adaptiveMgr.setRlsEnabled(enabled);
     if (!enabled) {
       // RLS無効時は推定履歴もクリア
       _historyMgr.clearRlsEstimates();
@@ -383,18 +366,12 @@ class Simulator {
 
   /// 忘却係数を変更（RLSが有効な場合のみ適用）
   void setRlsLambda(double lambda) {
-    rlsLambda = lambda;
-    if (rlsEnabled && rls != null) {
-      // 忘却係数の変更はコンストラクタの検証ロジックを維持するため
-      // RLSインスタンスを再生成して反映する
-      _initializeRls();
-    }
+    _adaptiveMgr.setRlsLambda(lambda);
   }
 
   /// STR有効化/無効化（UIからの切替）
   void setStrEnabled(bool enabled) {
-    strEnabled = enabled;
-    _initializeStr();
+    _adaptiveMgr.setStrEnabled(enabled);
     if (!enabled) {
       // STR無効時は推定履歴もクリア
       _historyMgr.clearRlsEstimates();
@@ -403,33 +380,12 @@ class Simulator {
 
   /// STRの所望の極を変更
   void setStrTargetPoles(double p1, double p2) {
-    strTargetPole1 = p1;
-    strTargetPole2 = p2;
-    if (strEnabled && str != null) {
-      str!.setTargetPoles(p1, p2);
-    }
+    _adaptiveMgr.setStrTargetPoles(p1, p2);
   }
 
-  /// STRインスタンスを初期化（プラント次数に応じて）
-  void _initializeStr() {
-    if (!strEnabled) {
-      str = null;
-      return;
-    }
-    final paramCount = _useSecondOrderPlant ? 4 : 2;
-    // STRはRLS内部を持つため、新しいRLSインスタンスを作成
-    // initialCovarianceScale を 100.0 に削減（オーバーフロー対策）
-    final strRls = RLS(
-      parameterCount: paramCount,
-      lambda: rlsLambda,
-      initialCovarianceScale: 100.0,
-    );
-    str = STR(
-      parameterCount: paramCount,
-      rls: strRls,
-      targetPole1: strTargetPole1,
-      targetPole2: strTargetPole2,
-    );
+  /// STRのバタワース極を設定
+  void setStrTargetPolesButterworth(double bandwidth) {
+    _adaptiveMgr.setStrTargetPolesButterworth(bandwidth);
   }
 
   /// 現在の状態を取得（デバッグ用）
