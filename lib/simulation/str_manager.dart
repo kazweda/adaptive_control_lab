@@ -3,9 +3,9 @@ import '../control/str.dart';
 
 /// STR/RLS のライフサイクルと設定を集約するマネージャー
 ///
-/// Simulator から適応制御まわりの初期化・切替・パラメータ設定の責務を分離する。
-class AdaptiveControlManager {
-  AdaptiveControlManager({
+/// Simulator から STR 関連の初期化・切替・パラメータ設定の責務を分離する。
+class StrManager {
+  StrManager({
     required bool useSecondOrderPlant,
     this.rlsLambda = 0.98,
     this.strTargetPole1 = 0.5,

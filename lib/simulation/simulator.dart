@@ -7,7 +7,7 @@ import '../control/str.dart';
 import 'disturbance_manager.dart';
 import 'history_manager.dart';
 import 'pid_manager.dart';
-import 'adaptive_control_manager.dart';
+import 'str_manager.dart';
 
 // DisturbancePreset はコンポーネント外から参照されるため export
 export 'disturbance_manager.dart' show DisturbancePreset;
@@ -25,7 +25,7 @@ class Simulator {
   late DisturbanceManager _distMgr;
   late HistoryManager _historyMgr;
 
-  late AdaptiveControlManager _adaptiveMgr;
+  late StrManager _strMgr;
 
   // プラント切替（1次/2次）
   bool _useSecondOrderPlant = false;
@@ -52,9 +52,7 @@ class Simulator {
     _pidMgr = PIDManager(PIDManager.createFirstOrderDefault());
     _distMgr = DisturbanceManager();
     _historyMgr = HistoryManager(maxLength: maxHistoryLength);
-    _adaptiveMgr = AdaptiveControlManager(
-      useSecondOrderPlant: _useSecondOrderPlant,
-    );
+    _strMgr = StrManager(useSecondOrderPlant: _useSecondOrderPlant);
   }
 
   // === ゲッター ===
@@ -81,13 +79,13 @@ class Simulator {
   List<double> get historyEstimatedB2 => _historyMgr.estimatedB2;
 
   // === RLS推定値のゲッター ===
-  bool get rlsEnabled => _adaptiveMgr.rlsEnabled;
-  double get rlsLambda => _adaptiveMgr.rlsLambda;
-  bool get strEnabled => _adaptiveMgr.strEnabled;
-  double get strTargetPole1 => _adaptiveMgr.strTargetPole1;
-  double get strTargetPole2 => _adaptiveMgr.strTargetPole2;
-  RLS? get rls => _adaptiveMgr.rls;
-  STR? get str => _adaptiveMgr.str;
+  bool get rlsEnabled => _strMgr.rlsEnabled;
+  double get rlsLambda => _strMgr.rlsLambda;
+  bool get strEnabled => _strMgr.strEnabled;
+  double get strTargetPole1 => _strMgr.strTargetPole1;
+  double get strTargetPole2 => _strMgr.strTargetPole2;
+  RLS? get rls => _strMgr.rls;
+  STR? get str => _strMgr.str;
 
   /// 1次プラント用の推定値（RLS/STR無効時は真値を返す）
   double get estimatedA {
@@ -229,7 +227,7 @@ class Simulator {
       _pidMgr = PIDManager(PIDManager.createFirstOrderDefault());
     }
     // RLS/STRインスタンスも再生成（パラメータ数に応じて）
-    _adaptiveMgr.updatePlantOrder(_useSecondOrderPlant);
+    _strMgr.updatePlantOrder(_useSecondOrderPlant);
     // 既存履歴はクリア（整合性のため）
     reset();
   }
@@ -348,7 +346,7 @@ class Simulator {
     plant.reset();
     _pidMgr.reset();
     _distMgr.reset();
-    _adaptiveMgr.resetControllers();
+    _strMgr.resetControllers();
     _controlInput = 0.0;
     _halted = false;
     stepCount = 0;
@@ -357,7 +355,7 @@ class Simulator {
 
   /// RLS有効化/無効化（UIからの切替）
   void setRlsEnabled(bool enabled) {
-    _adaptiveMgr.setRlsEnabled(enabled);
+    _strMgr.setRlsEnabled(enabled);
     if (!enabled) {
       // RLS無効時は推定履歴もクリア
       _historyMgr.clearRlsEstimates();
@@ -366,12 +364,12 @@ class Simulator {
 
   /// 忘却係数を変更（RLSが有効な場合のみ適用）
   void setRlsLambda(double lambda) {
-    _adaptiveMgr.setRlsLambda(lambda);
+    _strMgr.setRlsLambda(lambda);
   }
 
   /// STR有効化/無効化（UIからの切替）
   void setStrEnabled(bool enabled) {
-    _adaptiveMgr.setStrEnabled(enabled);
+    _strMgr.setStrEnabled(enabled);
     if (!enabled) {
       // STR無効時は推定履歴もクリア
       _historyMgr.clearRlsEstimates();
@@ -380,12 +378,12 @@ class Simulator {
 
   /// STRの所望の極を変更
   void setStrTargetPoles(double p1, double p2) {
-    _adaptiveMgr.setStrTargetPoles(p1, p2);
+    _strMgr.setStrTargetPoles(p1, p2);
   }
 
   /// STRのバタワース極を設定
   void setStrTargetPolesButterworth(double bandwidth) {
-    _adaptiveMgr.setStrTargetPolesButterworth(bandwidth);
+    _strMgr.setStrTargetPolesButterworth(bandwidth);
   }
 
   /// 現在の状態を取得（デバッグ用）
