@@ -212,11 +212,6 @@ class _MainScreenState extends State<MainScreen> {
               // === 外乱設定 ===
               DisturbancePanel(
                 simulator: simulator,
-                onTypeChanged: (type) {
-                  setState(() {
-                    simulator.setDisturbanceType(type);
-                  });
-                },
                 onPresetApplied: (presetName) {
                   setState(() {
                     simulator.applyDisturbancePreset(presetName);
