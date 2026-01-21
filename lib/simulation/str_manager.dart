@@ -64,11 +64,32 @@ class StrManager {
   }
 
   void setStrTargetPolesButterworth(double bandwidth) {
-    str?.setTargetPolesButterworth(bandwidth);
+    // STR が有効な場合は、そのインスタンスに設定してから値を保存する
     if (str != null) {
+      str!.setTargetPolesButterworth(bandwidth);
       strTargetPole1 = str!.targetPole1;
       strTargetPole2 = str!.targetPole2;
+      return;
     }
+
+    // STR が無効な場合でも、Butterworth 極を事前計算して保持しておく。
+    // これにより、後で setStrEnabled(true) が呼ばれた際に、
+    // Butterworth 由来の極で STR が初期化される。
+    final paramCount = _useSecondOrderPlant ? 4 : 2;
+    final tempRls = RLS(
+      parameterCount: paramCount,
+      lambda: rlsLambda,
+      initialCovarianceScale: initialCovarianceScale,
+    );
+    final tempStr = STR(
+      parameterCount: paramCount,
+      rls: tempRls,
+      targetPole1: strTargetPole1,
+      targetPole2: strTargetPole2,
+    );
+    tempStr.setTargetPolesButterworth(bandwidth);
+    strTargetPole1 = tempStr.targetPole1;
+    strTargetPole2 = tempStr.targetPole2;
   }
 
   void resetControllers() {
