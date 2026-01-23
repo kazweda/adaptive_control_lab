@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../control/plant.dart';
 import '../control/second_order_plant.dart';
 import '../control/plant_model.dart';
@@ -256,6 +258,29 @@ class Simulator {
     } else {
       // PID制御器で制御入力を計算
       _controlInput = _pidMgr.computeControl(error);
+    }
+
+    if (strEnabled && str != null && stepCount < 5) {
+      if (_useSecondOrderPlant) {
+        final p = str!.rls;
+        debugPrint(
+          'step=$stepCount '
+          'y=${plant.output.toStringAsFixed(3)} '
+          'u=${_controlInput.toStringAsFixed(3)} '
+          'a1_est=${p.estimatedA1.toStringAsFixed(4)} '
+          'a2_est=${p.estimatedA2.toStringAsFixed(4)} '
+          'b1_est=${p.estimatedB1.toStringAsFixed(4)} '
+          'b2_est=${p.estimatedB2.toStringAsFixed(4)}',
+        );
+      } else {
+        debugPrint(
+          'step=$stepCount '
+          'y=${plant.output.toStringAsFixed(3)} '
+          'u=${_controlInput.toStringAsFixed(3)} '
+          'a_est=${str!.rls.estimatedA.toStringAsFixed(4)} '
+          'b_est=${str!.rls.estimatedB.toStringAsFixed(4)}',
+        );
+      }
     }
 
     // 制御入力が安全上限を超えたら停止（プラント更新前に中断）

@@ -107,6 +107,8 @@ class StrManager {
       parameterCount: paramCount,
       lambda: rlsLambda,
       initialCovarianceScale: initialCovarianceScale,
+      // UIデフォルトのプラント(1次: a=0.8, b=0.5)に合わせた初期推定値
+      initialTheta: paramCount == 2 ? [0.8, 0.5] : null,
     );
   }
 
@@ -120,6 +122,8 @@ class StrManager {
       parameterCount: paramCount,
       lambda: rlsLambda,
       initialCovarianceScale: initialCovarianceScale,
+      // UIデフォルトのプラント(1次: a=0.8, b=0.5)に合わせた初期推定値
+      initialTheta: paramCount == 2 ? [0.8, 0.5] : null,
     );
     str = STR(
       parameterCount: paramCount,
