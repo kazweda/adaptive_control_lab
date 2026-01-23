@@ -1,5 +1,6 @@
-/// STR制御の定常状態分析テスト
-/// Issue #40 の根本原因調査用
+// STR制御の定常状態分析テスト
+// Issue #40 の根本原因調査用
+// ignore_for_file: avoid_print
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:adaptive_control_lab/control/plant.dart';

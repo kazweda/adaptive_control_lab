@@ -13,6 +13,23 @@ class STR {
   /// 初期推定値が不確定な場合、大きな制御入力が発生する可能性があるため制限
   double controlInputLimit = 10.0;
 
+  /// 段階的極配置の有効化フラグ
+  /// 有効時: 初期段階は緩い極（0.7～0.8）で保守的に制御し、推定が収束したら所望の極に移行
+  bool _enableAdaptivePolePlacement = false;
+
+  /// 推定収束と判定する時間ステップ数（デフォルト: 100）
+  int _estimationConvergenceSteps = 100;
+
+  /// 段階的制御入力制限の有効化フラグ
+  /// 有効時: 初期段階は±1.0に制限し、推定収束後に±10.0に緩和
+  bool _enableAdaptiveControlLimit = false;
+
+  /// 制御入力の初期制限値（推定精度が低い初期段階）
+  double _initialControlInputLimit = 1.0;
+
+  /// 制御ステップ数カウンター（段階的制御用）
+  int _stepCount = 0;
+
   final List<double> _previousOutputs = []; // y(k-1), y(k-2)
   final List<double> _previousInputs = []; // u(k-1), u(k-2)
 
@@ -37,28 +54,37 @@ class STR {
   /// y: 現在の出力, r: 目標値（参照信号）
   /// 返値は安全性のため [-controlInputLimit, controlInputLimit] にクリップされる
   double computeControl(double y, double r) {
+    _stepCount++;
+
+    // 段階的極配置: 推定が収束するまでは緩い極を使用
+    final currentPole1 = _getAdaptivePole1();
+    final currentPole2 = _getAdaptivePole2();
+
     double u;
 
     if (parameterCount == 2) {
       // 1次プラント: y(k) = a*y(k-1) + b*u(k-1)
       final a = rls.estimatedA;
       final b = rls.estimatedB;
-      u = _computeControl1st(a, b, y, r);
+      u = _computeControl1st(a, b, currentPole1, y, r);
     } else if (parameterCount == 4) {
       // 2次プラント: y(k) = a1*y(k-1) + a2*y(k-2) + b1*u(k-1) + b2*u(k-2)
       final a1 = rls.estimatedA1;
       final a2 = rls.estimatedA2;
       final b1 = rls.estimatedB1;
       final b2 = rls.estimatedB2;
-      u = _computeControl2nd(a1, a2, b1, b2, y, r);
+      u = _computeControl2nd(a1, a2, b1, b2, currentPole1, currentPole2, y, r);
     } else {
       throw ArgumentError('Unsupported parameter count: $parameterCount');
     }
 
+    // 段階的制御入力制限
+    final limit = _getAdaptiveControlLimit();
+
     // 制御入力の安全制限（オーバーフロー対策）
     // 初期的に推定パラメータが不確定なため、大きな制御入力が発生する可能性がある
     // 最初のステップ付近では慎重に制御する
-    final clamped = u.clamp(-controlInputLimit, controlInputLimit).toDouble();
+    final clamped = u.clamp(-limit, limit).toDouble();
 
     // 過去値を記録（実際に適用する値で更新する）
     _updateHistory(y, clamped);
@@ -66,16 +92,57 @@ class STR {
     return clamped;
   }
 
+  /// 段階的に適用する極1を取得
+  /// _enableAdaptivePolePlacement有効時: 初期段階は緩い極、収束後は所望の極
+  double _getAdaptivePole1() {
+    if (!_enableAdaptivePolePlacement ||
+        _stepCount >= _estimationConvergenceSteps) {
+      return targetPole1;
+    }
+
+    // 線形補間: 初期段階（p=0.75）から所望の極へ移行
+    final initialPole = 0.75;
+    final progress = _stepCount / _estimationConvergenceSteps;
+    return initialPole + (targetPole1 - initialPole) * progress;
+  }
+
+  /// 段階的に適用する極2を取得
+  double _getAdaptivePole2() {
+    if (!_enableAdaptivePolePlacement ||
+        _stepCount >= _estimationConvergenceSteps) {
+      return targetPole2;
+    }
+
+    // 線形補間
+    final initialPole = 0.75;
+    final progress = _stepCount / _estimationConvergenceSteps;
+    return initialPole + (targetPole2 - initialPole) * progress;
+  }
+
+  /// 段階的に適用する制御入力制限を取得
+  /// _enableAdaptiveControlLimit有効時: 初期段階は±1.0、収束後は±10.0
+  double _getAdaptiveControlLimit() {
+    if (!_enableAdaptiveControlLimit ||
+        _stepCount >= _estimationConvergenceSteps) {
+      return controlInputLimit;
+    }
+
+    // 線形補間: 初期制限から最大制限へ移行
+    final progress = _stepCount / _estimationConvergenceSteps;
+    return _initialControlInputLimit +
+        (controlInputLimit - _initialControlInputLimit) * progress;
+  }
+
   /// 1次プラント用制御則（極配置 + リファレンスゲイン）
   /// u(k) = ((1 - p_d) * r(k) - (a - p_d) * y(k)) / b
   /// ※ (1 - p_d) がリファレンスゲイン（DCゲインを1に補正）
-  double _computeControl1st(double a, double b, double y, double r) {
+  double _computeControl1st(double a, double b, double p, double y, double r) {
     // b=0の場合は安全のため0を返す
     if (b.abs() < 1e-8) {
       return 0.0;
     }
 
-    final numerator = (1 - targetPole1) * r - (a - targetPole1) * y;
+    final numerator = (1 - p) * r - (a - p) * y;
     return numerator / b;
   }
 
@@ -90,6 +157,8 @@ class STR {
     double a2,
     double b1,
     double b2,
+    double p1,
+    double p2,
     double y,
     double r,
   ) {
@@ -98,8 +167,8 @@ class STR {
       return 0.0;
     }
 
-    final p1p2Sum = targetPole1 + targetPole2;
-    final p1p2Prod = targetPole1 * targetPole2;
+    final p1p2Sum = p1 + p2;
+    final p1p2Prod = p1 * p2;
 
     final term1 = (1 - p1p2Sum - p1p2Prod) * r;
     final term2 = (a1 - p1p2Sum) * y;
@@ -129,6 +198,32 @@ class STR {
     rls.reset();
     _previousOutputs.clear();
     _previousInputs.clear();
+    _stepCount = 0;
+  }
+
+  /// 段階的極配置を有効化
+  /// [convergenceSteps] 推定が収束したと判定するステップ数
+  void enableAdaptivePolePlacement({int convergenceSteps = 100}) {
+    _enableAdaptivePolePlacement = true;
+    _estimationConvergenceSteps = convergenceSteps;
+  }
+
+  /// 段階的制御入力制限を有効化
+  /// [initialLimit] 初期段階での制御入力制限（デフォルト: ±1.0）
+  /// [convergenceSteps] 推定が収束したと判定するステップ数
+  void enableAdaptiveControlLimit({
+    double initialLimit = 1.0,
+    int convergenceSteps = 100,
+  }) {
+    _enableAdaptiveControlLimit = true;
+    _initialControlInputLimit = initialLimit;
+    _estimationConvergenceSteps = convergenceSteps;
+  }
+
+  /// 段階的制御を無効化
+  void disableAdaptiveControl() {
+    _enableAdaptivePolePlacement = false;
+    _enableAdaptiveControlLimit = false;
   }
 
   /// ゲッター: 1次系用

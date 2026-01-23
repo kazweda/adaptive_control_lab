@@ -1,7 +1,5 @@
-/// Simulator統合テスト - STR制御の定常状態検証
-/// Issue #40 実機動作での検証
-library simulator_str_integration_test;
-
+// Simulator統合テスト - STR制御の定常状態検証
+// Issue #40 実機動作での検証
 // ignore_for_file: avoid_print
 
 import 'package:flutter_test/flutter_test.dart';
