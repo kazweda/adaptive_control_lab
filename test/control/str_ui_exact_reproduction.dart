@@ -1,5 +1,5 @@
-// UIの正確な再現テスト
-// RLS初期値: [0.5, 0.3] (UIのデフォルト)
+// STRの旧RLS初期値[0.5, 0.3]による飽和再現テスト（旧デフォルト再現）
+// 真のプラント (UIデフォルト): a=0.8, b=0.5
 // 極配置パラメータ: p1=0.81
 // ignore_for_file: avoid_print
 
@@ -9,14 +9,14 @@ import 'package:adaptive_control_lab/control/rls.dart';
 import 'package:adaptive_control_lab/control/str.dart';
 
 void main() {
-  group('STR UI再現テスト (p1=0.81, RLS初期=[0.5, 0.3])', () {
-    test('UI条件での p1=0.81 動作確認', () {
+  group('STR 旧RLS初期値再現テスト (p1=0.81, RLS初期=[0.5, 0.3])', () {
+    test('旧RLSデフォルト条件での p1=0.81 動作確認', () {
       const a = 0.8; // 真のプラントパラメータ
       const b = 0.5;
       const p1 = 0.81; // 目標極
       const r = 1.0; // 目標値
 
-      // UIと同じ条件: RLS初期推定値はデフォルト [0.5, 0.3]
+      // 旧RLSデフォルト値 [0.5, 0.3] を用いて飽和を再現する
       final plant = Plant(a: a, b: b);
       final rls = RLS(
         parameterCount: 2,
@@ -26,7 +26,7 @@ void main() {
       );
       final str = STR(parameterCount: 2, rls: rls, targetPole1: p1);
 
-      print('\n=== UI条件での p1=0.81 再現テスト ===');
+      print('\n=== 旧RLSデフォルトでの p1=0.81 再現テスト ===');
       print('真のプラント: a=$a, b=$b');
       print('RLS初期推定値: ${rls.theta}');
       print('目標極: p=$p1');
@@ -72,7 +72,7 @@ void main() {
 
       print('\n=== RLS初期値の影響比較 ===');
 
-      // ケース1: UIのデフォルト値 [0.5, 0.3]
+      // ケース1: 旧RLSデフォルト値 [0.5, 0.3]（バグ再現用）
       {
         final plant1 = Plant(a: a, b: b);
         final rls1 = RLS(
@@ -82,7 +82,7 @@ void main() {
         );
         final str1 = STR(parameterCount: 2, rls: rls1, targetPole1: p1);
 
-        print('\nケース1: RLS初期=[0.5, 0.3]（UIデフォルト）');
+        print('\nケース1: RLS初期=[0.5, 0.3]（旧RLSデフォルト／バグ再現用）');
         double y = 0.0;
         for (int k = 0; k < 5; k++) {
           final u = str1.computeControl(y, r);
@@ -91,18 +91,18 @@ void main() {
         }
       }
 
-      // ケース2: 診断テストの値 [0.8, 0.5]
+      // ケース2: RLS初期値 [0.8, 0.5]（UIデフォルト/修正後）
       {
         final plant2 = Plant(a: a, b: b);
         final rls2 = RLS(
           parameterCount: 2,
           lambda: 1.0,
           initialCovarianceScale: 100.0,
-          initialTheta: [a, b], // 正確な推定値で初期化
+          initialTheta: [a, b], // 正確な推定値で初期化（UIデフォルト/修正後）
         );
         final str2 = STR(parameterCount: 2, rls: rls2, targetPole1: p1);
 
-        print('\nケース2: RLS初期=[0.8, 0.5]（診断テスト）');
+        print('\nケース2: RLS初期=[0.8, 0.5]（UIデフォルト/修正後）');
         double y = 0.0;
         for (int k = 0; k < 5; k++) {
           final u = str2.computeControl(y, r);
