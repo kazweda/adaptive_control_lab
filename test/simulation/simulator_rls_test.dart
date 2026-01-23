@@ -59,16 +59,17 @@ void main() {
 
       test('RLS有効時は推定値を返す', () {
         sim.setRlsEnabled(true);
-        // 初期値はデフォルト値（RLSコンストラクタで [0.5, 0.3]）
-        expect(sim.estimatedA, 0.5);
-        expect(sim.estimatedB, 0.3);
+        // 初期値はデフォルト値（UIデフォルトのプラント真値 [0.8, 0.5] に合わせる）
+        expect(sim.estimatedA, 0.8);
+        expect(sim.estimatedB, 0.5);
 
-        // シミュレーション実行で推定値が更新される
+        // シミュレーション実行で推定値が安定して真値付近を維持する
         for (int i = 0; i < 50; i++) {
           sim.step();
         }
-        // 推定値が初期値から変化する
-        expect(sim.estimatedA != 0.5 || sim.estimatedB != 0.3, true);
+        // RLS の忘却係数と初期共分散により真値付近で収束（若干の誤差を許容）
+        expect(sim.estimatedA, closeTo(0.8, 0.1));
+        expect(sim.estimatedB, closeTo(0.5, 0.2));
       });
     });
 
