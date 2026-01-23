@@ -66,20 +66,25 @@ class STR {
     return clamped;
   }
 
-  /// 1次プラント用制御則（極配置）
-  /// u(k) = (r(k) - (a - p_d)*y(k)) / b
+  /// 1次プラント用制御則（極配置 + リファレンスゲイン）
+  /// u(k) = ((1 - p_d) * r(k) - (a - p_d) * y(k)) / b
+  /// ※ (1 - p_d) がリファレンスゲイン（DCゲインを1に補正）
   double _computeControl1st(double a, double b, double y, double r) {
     // b=0の場合は安全のため0を返す
     if (b.abs() < 1e-8) {
       return 0.0;
     }
 
-    final numerator = r - (a - targetPole1) * y;
+    final numerator = (1 - targetPole1) * r - (a - targetPole1) * y;
     return numerator / b;
   }
 
-  /// 2次プラント用制御則（極配置）
-  /// u(k) = (1/b1) * [r(k) - (a1 - p1 - p2)*y(k) - (a2 - p1*p2)*y(k-1) - b2*u(k-1)]
+  /// 2次プラント用制御則（極配置 + リファレンスゲイン）
+  /// u(k) = (1/b1) * [ (1 - p1 - p2 - p1*p2) * r(k)
+  ///                 - (a1 - (p1 + p2)) * y(k)
+  ///                 - (a2 - p1*p2) * y(k-1)
+  ///                 - b2 * u(k-1) ]
+  /// ※ (1 - p1 - p2 - p1*p2) がリファレンスゲイン（DCゲインを1に補正）
   double _computeControl2nd(
     double a1,
     double a2,
@@ -96,7 +101,7 @@ class STR {
     final p1p2Sum = targetPole1 + targetPole2;
     final p1p2Prod = targetPole1 * targetPole2;
 
-    final term1 = r;
+    final term1 = (1 - p1p2Sum - p1p2Prod) * r;
     final term2 = (a1 - p1p2Sum) * y;
     final term3 =
         (a2 - p1p2Prod) *

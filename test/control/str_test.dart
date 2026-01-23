@@ -1,7 +1,9 @@
 // STR (Self-Tuning Regulator) の単体テスト
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:adaptive_control_lab/control/plant.dart';
 import 'package:adaptive_control_lab/control/rls.dart';
+import 'package:adaptive_control_lab/control/second_order_plant.dart';
 import 'package:adaptive_control_lab/control/str.dart';
 
 void main() {
@@ -56,10 +58,10 @@ void main() {
       test('基本的な制御入力計算', () {
         // 初期化後に目標値追従
         // y=0.5, r=1.0, a=0.8, b=0.5, p_d=0.5
-        // u = (r - (a - p_d)*y) / b = (1.0 - (0.8 - 0.5)*0.5) / 0.5
-        //   = (1.0 - 0.15) / 0.5 = 1.7
+        // u = ((1 - p_d)*r - (a - p_d)*y) / b
+        //   = ((1-0.5)*1.0 - (0.8-0.5)*0.5) / 0.5 = 0.7
         final u = str1.computeControl(0.5, 1.0);
-        expect(u, closeTo(1.7, 0.01));
+        expect(u, closeTo(0.7, 0.01));
       });
 
       test('ゼロ目標値での制御', () {
@@ -82,16 +84,16 @@ void main() {
     group('制御則計算（2次系）', () {
       test('基本的な制御入力計算', () {
         // 1回目は履歴が空なので y(k-1), u(k-1) は0として計算される
-        // u1 = (1/0.5) * [1.0 - (0.8 - 0.8)*0.5 - (-0.3 - 0.15)*0 - 0.1*0]
-        //     = 2.0
+        // u1 = (1/0.5) * [(1 - p1 - p2 - p1*p2)*r - (a1 - p1 - p2)*y]
+        //     = (1/0.5) * [0.05 - 0] = 0.1
         final u1 = str2.computeControl(0.5, 1.0);
-        expect(u1, closeTo(2.0, 0.01));
+        expect(u1, closeTo(0.1, 0.01));
 
-        // 2回目は履歴が更新され、y(k-1)=0.5, u(k-1)=u1=2.0 を用いる
-        // u2 = (1/0.5) * [1.0 - (0.8 - 0.8)*0.3 - (-0.3 - 0.15)*0.5 - 0.1*2.0]
-        //     = 2.05
+        // 2回目は履歴が更新され、y(k-1)=0.5, u(k-1)=u1 を用いる
+        // u2 = (1/0.5) * [0.05 - 0 - (-0.45)*0.5 - 0.1*u1]
+        //     ≈ 0.53
         final u2 = str2.computeControl(0.3, 1.0);
-        expect(u2, closeTo(2.05, 0.01));
+        expect(u2, closeTo(0.53, 0.01));
       });
 
       test('b1=0に近い場合はセーフガード', () {
@@ -169,6 +171,49 @@ void main() {
         final u = str1.computeControl(0.5, 10.0);
         expect(u.isFinite, true);
         expect(u.abs(), lessThan(100)); // 妥当な制御入力
+      });
+    });
+
+    group('定常偏差の解消', () {
+      test('1次系: リファレンスゲインで定常偏差がほぼゼロ', () {
+        final plant = Plant(a: 0.8, b: 0.5);
+        final rls = RLS(
+          parameterCount: 2,
+          lambda: 1.0,
+          initialTheta: [plant.a, plant.b],
+        );
+        final str = STR(parameterCount: 2, rls: rls, targetPole1: 0.3);
+
+        const r = 1.0;
+        for (int k = 0; k < 80; k++) {
+          final u = str.computeControl(plant.output, r);
+          plant.step(u);
+        }
+
+        expect(plant.output, closeTo(r, 1e-3));
+      });
+
+      test('2次系: リファレンスゲインで定常偏差がほぼゼロ', () {
+        final plant = SecondOrderPlant(a1: 1.6, a2: -0.64, b1: 0.5, b2: 0.2);
+        final rls = RLS(
+          parameterCount: 4,
+          lambda: 1.0,
+          initialTheta: [plant.a1, plant.a2, plant.b1, plant.b2],
+        );
+        final str = STR(
+          parameterCount: 4,
+          rls: rls,
+          targetPole1: 0.4,
+          targetPole2: 0.3,
+        );
+
+        const r = 1.0;
+        for (int k = 0; k < 200; k++) {
+          final u = str.computeControl(plant.output, r);
+          plant.step(u);
+        }
+
+        expect(plant.output, closeTo(r, 1e-2));
       });
     });
 
