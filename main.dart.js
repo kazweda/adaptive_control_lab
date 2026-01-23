@@ -35822,17 +35822,21 @@ k(a){var s=this
 return"SecondOrderPlant(a1: "+A.o(s.a)+", a2: "+A.o(s.b)+", b1: "+A.o(s.c)+", b2: "+A.o(s.d)+", output: "+B.c.N(s.e,3)+")"}}
 A.a3d.prototype={
 zH(){if(Math.abs(this.c)>=1||Math.abs(this.d)>=1)throw A.h(A.bL("Target poles must be inside unit circle: |p| < 1.0",null))},
-WJ(a,b,c,d){if(Math.abs(b)<1e-8)return 0
-return(d-(a-this.c)*c)/b},
+WJ(a,b,c,d){var s
+if(Math.abs(b)<1e-8)return 0
+s=this.c
+return((1-s)*d-(a-s)*c)/b},
 WK(a,b,c,d,e,f){var s,r,q,p,o=this
 if(Math.abs(c)<1e-8)return 0
 s=o.c
 r=o.d
-q=o.f
-q=q.length!==0?q[0]:0
-p=o.r
-p=p.length!==0?p[0]:0
-return(f-(a-(s+r))*e-(b-s*r)*q-d*p)/c},
+q=s+r
+p=s*r
+s=o.f
+s=s.length!==0?s[0]:0
+r=o.r
+r=r.length!==0?r[0]:0
+return((1-q-p)*f-(a-q)*e-(b-p)*s-d*r)/c},
 k(a){return"STR(paramCount="+this.a+", p1="+A.o(this.c)+", p2="+A.o(this.d)+")"}}
 A.FW.prototype={
 M(a){var s=null
