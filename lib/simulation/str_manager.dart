@@ -7,10 +7,10 @@ import '../control/str.dart';
 class StrManager {
   StrManager({
     required bool useSecondOrderPlant,
-    this.rlsLambda = 0.98,
+    this.rlsLambda = 0.995,
     this.strTargetPole1 = 0.5,
     this.strTargetPole2 = 0.3,
-    this.initialCovarianceScale = 100.0,
+    this.initialCovarianceScale = 1.0,
   }) : _useSecondOrderPlant = useSecondOrderPlant;
 
   bool _useSecondOrderPlant;

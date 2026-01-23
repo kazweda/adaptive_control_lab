@@ -299,36 +299,40 @@ class Simulator {
     plant.step(_controlInput + d);
 
     // RLS更新（STR有効時はstr.rls、無効時はスタンドアロンrls）
-    if (strEnabled && str != null) {
-      // STR有効時：STR内部のRLSを更新
-      final List<double> phi;
-      if (_useSecondOrderPlant) {
-        final p = plant as SecondOrderPlant;
-        phi = [
-          prevOutput,
-          p.previousPreviousOutput,
-          prevInput,
-          p.previousPreviousInput,
-        ];
-      } else {
-        phi = [prevOutput, prevInput];
+    // ウォームアップ期間（最初の10ステップ）はRLS更新をスキップして、
+    // initialThetaへの信頼度を保つ
+    if (stepCount >= 10) {
+      if (strEnabled && str != null) {
+        // STR有効時：STR内部のRLSを更新
+        final List<double> phi;
+        if (_useSecondOrderPlant) {
+          final p = plant as SecondOrderPlant;
+          phi = [
+            prevOutput,
+            p.previousPreviousOutput,
+            prevInput,
+            p.previousPreviousInput,
+          ];
+        } else {
+          phi = [prevOutput, prevInput];
+        }
+        str!.rls.update(phi, plant.output);
+      } else if (rlsEnabled && rls != null) {
+        // RLS単独有効時：スタンドアロンRLSを更新
+        final List<double> phi;
+        if (_useSecondOrderPlant) {
+          final p = plant as SecondOrderPlant;
+          phi = [
+            prevOutput,
+            p.previousPreviousOutput,
+            prevInput,
+            p.previousPreviousInput,
+          ];
+        } else {
+          phi = [prevOutput, prevInput];
+        }
+        rls!.update(phi, plant.output);
       }
-      str!.rls.update(phi, plant.output);
-    } else if (rlsEnabled && rls != null) {
-      // RLS単独有効時：スタンドアロンRLSを更新
-      final List<double> phi;
-      if (_useSecondOrderPlant) {
-        final p = plant as SecondOrderPlant;
-        phi = [
-          prevOutput,
-          p.previousPreviousOutput,
-          prevInput,
-          p.previousPreviousInput,
-        ];
-      } else {
-        phi = [prevOutput, prevInput];
-      }
-      rls!.update(phi, plant.output);
     }
 
     // stepCountをインクリメント（出力チェック前に実施）
@@ -367,6 +371,7 @@ class Simulator {
   }
 
   /// シミュレーションをリセット
+  /// STR/RLS の有効状態と設定値は保持され、ステップカウントと履歴のみリセット
   void reset() {
     plant.reset();
     _pidMgr.reset();
