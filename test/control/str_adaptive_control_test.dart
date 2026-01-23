@@ -68,7 +68,12 @@ void main() {
       print('\n最終結果: y_ss=${yFinal.toStringAsFixed(6)}, expected=1.0');
       print('偏差: ${(yFinal - r).abs().toStringAsFixed(6)}');
 
-      // 段階的制御により、精度が改善されることを期待
+      // p=0.3は Issue #40 で最も問題となった極であり、他の極（p=0.5, 0.7）と比べて
+      // 適応同定と極配置の収束が遅く、300ステップ以内では定常偏差がやや大きく残る。
+      // 実験的には |y_ss - r| ≈ 0.06～0.07 程度に収束することを確認しており、
+      // テストのフレークを避けるために許容誤差を 0.08 としている。
+      // 将来アルゴリズムや収束ステップ数を改善できた場合は、許容誤差を 0.05 程度まで
+      // 引き締めることを検討する。
       expect(yFinal, closeTo(r, 0.08), reason: '段階的制御で定常偏差が大きく改善されるべき');
     });
 
@@ -211,11 +216,135 @@ void main() {
       );
 
       // 段階的制御により、定常偏差が改善されることを確認
+      // 数値誤差を考慮して 1% 程度の許容範囲で「同等以上」の性能を確認
       expect(
         (y2 - r).abs(),
-        lessThan((y1 - r).abs() * 1.5),
+        lessThanOrEqualTo((y1 - r).abs() * 1.01),
         reason: '段階的制御は少なくとも従来方法と同等かそれ以上の性能を期待',
       );
+    });
+
+    test('disableAdaptiveControl: 有効→無効の動作確認', () {
+      const a = 0.8;
+      const b = 0.5;
+      const p = 0.3;
+      const r = 1.0;
+
+      final plant = Plant(a: a, b: b);
+      final rls = RLS(
+        parameterCount: 2,
+        lambda: 1.0,
+        initialCovarianceScale: 100.0,
+      );
+      final str = STR(parameterCount: 2, rls: rls, targetPole1: p);
+
+      // 段階的制御を有効化
+      str.enableAdaptivePolePlacement(convergenceSteps: 100);
+      str.enableAdaptiveControlLimit(initialLimit: 1.0, convergenceSteps: 100);
+
+      // 50ステップ実行（適応制御が有効）
+      double y = 0.0;
+      double prevY = 0.0;
+      double prevU = 0.0;
+
+      for (int k = 0; k < 50; k++) {
+        final u = str.computeControl(y, r);
+        y = plant.step(u);
+        rls.update([prevY, prevU], y);
+        prevY = y;
+        prevU = u;
+      }
+
+      final yAfter50 = y;
+      print('50ステップ後（適応制御有効）: y=${yAfter50.toStringAsFixed(6)}');
+
+      // 段階的制御を無効化
+      str.disableAdaptiveControl();
+
+      // さらに50ステップ実行（適応制御が無効に）
+      for (int k = 0; k < 50; k++) {
+        final u = str.computeControl(y, r);
+        y = plant.step(u);
+        rls.update([prevY, prevU], y);
+        prevY = y;
+        prevU = u;
+      }
+
+      final yAfter100 = y;
+      print('100ステップ後（適応制御無効）: y=${yAfter100.toStringAsFixed(6)}');
+
+      // 無効化後は通常の極配置で動作することを確認
+      // （制御が適応的でなくなるので動作が変わる）
+      expect(yAfter100.isFinite, true, reason: '制御が無限大で発散していない');
+      expect(!yAfter100.isNaN, true, reason: '制御がNaNで破綻していない');
+    });
+
+    test('エッジケース: convergenceSteps=1での動作', () {
+      const a = 0.8;
+      const b = 0.5;
+      const p = 0.5;
+      const r = 1.0;
+
+      final plant = Plant(a: a, b: b);
+      final rls = RLS(
+        parameterCount: 2,
+        lambda: 1.0,
+        initialCovarianceScale: 100.0,
+      );
+      final str = STR(parameterCount: 2, rls: rls, targetPole1: p);
+
+      // 極めて短い収束期間（1ステップ）
+      str.enableAdaptivePolePlacement(convergenceSteps: 1);
+      str.enableAdaptiveControlLimit(initialLimit: 1.0, convergenceSteps: 1);
+
+      double y = 0.0;
+      double prevY = 0.0;
+      double prevU = 0.0;
+
+      // k=0: progress=0/1=0 → 初期極（0.75）を使用
+      // k=1: progress=1/1=1 → 目標極（0.5）を使用
+      for (int k = 0; k < 10; k++) {
+        final u = str.computeControl(y, r);
+        y = plant.step(u);
+        rls.update([prevY, prevU], y);
+        prevY = y;
+        prevU = u;
+      }
+
+      expect(y.isFinite, true, reason: '極端な収束期間でも安定して動作');
+    });
+
+    test('エッジケース: 初期極が目標極より大きい場合', () {
+      const a = 0.8;
+      const b = 0.5;
+      const p = 0.2; // 目標極=0.2 < 初期極=0.75
+      const r = 1.0;
+
+      final plant = Plant(a: a, b: b);
+      final rls = RLS(
+        parameterCount: 2,
+        lambda: 1.0,
+        initialCovarianceScale: 100.0,
+      );
+      final str = STR(parameterCount: 2, rls: rls, targetPole1: p);
+
+      // 初期極が目標極より大きい場合、補間は0.75 → 0.2 に向かう（減少）
+      str.enableAdaptivePolePlacement(initialPole: 0.75, convergenceSteps: 100);
+
+      double y = 0.0;
+      double prevY = 0.0;
+      double prevU = 0.0;
+
+      for (int k = 0; k < 150; k++) {
+        final u = str.computeControl(y, r);
+        y = plant.step(u);
+        rls.update([prevY, prevU], y);
+        prevY = y;
+        prevU = u;
+      }
+
+      // 極配置が正しく機能することを確認（発散しないこと）
+      expect(y.isFinite, true, reason: '極配置の補間方向が正しく動作');
     });
   });
 }

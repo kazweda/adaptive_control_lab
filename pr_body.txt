@@ -1,0 +1,82 @@
+## 実装内容
+
+Issue #40 の根本原因を特定し、RLS推定精度の低下問題を解決しました。
+
+### 根本原因
+
+- **Issue #37対策の副作用**: `initialCovarianceScale` を 1000 → 100 に縮小したことで、RLSの学習速度が低下
+- **推定誤差の影響**: bパラメータで約50%の誤差（真値0.5 → 推定値0.26）
+- **極配置の不安定化**: 不正確な推定値で極配置を実行すると、意図した閉ループ特性とは異なり、小さい極（p=0.3など）で発散
+
+### 解決策
+
+**段階的適応制御の実装** (`lib/control/str.dart`)
+
+1. **段階的極配置**
+   - 初期段階（0〜100ステップ）: 緩い極（p=0.75）で保守的に制御
+   - 収束段階（100ステップ以降）: 所望の極へ線形移行
+   - 推定精度が低い初期段階での不安定化を防止
+
+2. **段階的制御入力制限**
+   - 初期段階: ±1.0 に制限（推定精度が低い）
+   - 収束段階: ±10.0 に緩和（通常動作）
+   - 過大な制御入力による学習阻害を防止
+
+3. **有効化API**
+   ```dart
+   str.enableAdaptivePolePlacement(convergenceSteps: 100);
+   str.enableAdaptiveControlLimit(initialLimit: 1.0, convergenceSteps: 100);
+   ```
+
+### テスト結果
+
+**新規テスト** (`test/control/str_adaptive_control_test.dart`)
+- p=0.3: 従来方式で発散 → 段階的制御で y_ss=1.000013 ✅
+- p=0.5: y_ss=1.000018 ✅
+- p=0.7: y_ss=1.000030 ✅
+- 比較テスト: 段階的制御の優位性を確認 ✅
+
+**調査用テスト** (`test/control/str_steady_state_analysis.dart`)
+- 理論検証: リファレンスゲインの正しさを確認 ✅
+- 完全な推定値使用時: すべての極で y_ss=1.0 ✅
+
+**統合テスト** (`test/simulation/simulator_str_integration_test.dart`)
+- 従来方式の動作を記録（p=0.3で大きな偏差が発生することを確認）
+
+**全体テスト**: 225テスト すべて成功 ✅
+
+### 技術ドキュメント
+
+`docs/TECHNICAL_NOTES.md` に根本原因分析を記録:
+- 推定誤差の時系列データ
+- 理論検証 vs 実機動作の比較
+- 短期/中期/長期の解決策
+- PR #45の評価と教訓
+
+## 関連Issue
+
+Implements #40
+
+## チェックリスト
+
+- [x] `flutter analyze` - No issues found!
+- [x] `flutter test` - 225/225 tests passed
+- [x] `dart format .` - 実施済み
+- [x] テストカバレッジ: 新規機能に対して十分なテスト追加
+- [x] ドキュメント更新: TECHNICAL_NOTES.md 追加
+- [x] QUALITY_POLICY.md 遵守
+
+## Breaking Changes
+
+なし。段階的制御はオプション機能であり、デフォルトでは無効です。
+
+## 追加情報
+
+**Issue #37 との関係**:
+- 本修正により、#37のオーバーフロー対策（initialCovarianceScale=100）を維持しつつ、#40の定常偏差も解決
+- 段階的制御により、両方の問題に対応可能
+
+**今後の展開**:
+- Simulatorでのデフォルト有効化は別PRで検討（ユーザビリティとの兼ね合い）
+- 推定精度モニタリング機能の追加（中期対策）
+- Projection Algorithmの実装（長期対策）

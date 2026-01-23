@@ -65,13 +65,33 @@ void main() {
       }
 
       final yFinal = sim.plantOutput;
+      final aEst = sim.estimatedA;
+      final bEst = sim.estimatedB;
       print('最終: y_ss=${yFinal.toStringAsFixed(6)}');
       print('偏差: ${(yFinal - 1.0).abs().toStringAsFixed(6)}');
+      print('推定値: a=${aEst.toStringAsFixed(6)}, b=${bEst.toStringAsFixed(6)}');
 
-      // 従来方式ではp=0.3で大きな偏差または発散が発生する
+      // 従来方式ではp=0.3で大きな偏差または発散が発生する可能性がある
       // （issue #40の事象を確認するテスト）
-      // 発散していなければ合格（停止していないことを確認）
+      // 1. シミュレーションが停止していないことを確認（発散チェック）
       expect(sim.isHalted, false, reason: 'シミュレーションが停止していないこと');
+
+      // 2. RLS推定精度が低いことを確認（この問題の本質）
+      // 従来方式ではinitialCovarianceScale=100の影響で推定精度が低い
+      final bEstError = (bEst - 0.5).abs(); // プラントb=0.5との差
+      expect(
+        bEstError,
+        greaterThan(0.1),
+        reason: 'b推定精度が低いことが定常偏差の根本原因であることを確認',
+      );
+
+      // 3. 定常偏差が大きいことを確認（symptom）
+      final steadyStateError = (yFinal - 1.0).abs();
+      expect(
+        steadyStateError,
+        greaterThan(0.01),
+        reason: 'p=0.3での定常偏差が目標値を大きく超えている',
+      );
     });
 
     test('1次系: デフォルトプラント + STR (p=0.7)', () {

@@ -14,11 +14,14 @@ class STR {
   double controlInputLimit = 10.0;
 
   /// 段階的極配置の有効化フラグ
-  /// 有効時: 初期段階は緩い極（0.7～0.8）で保守的に制御し、推定が収束したら所望の極に移行
+  /// 有効時: 初期段階は緩い極で保守的に制御し、推定が収束したら所望の極に移行
   bool _enableAdaptivePolePlacement = false;
 
-  /// 推定収束と判定する時間ステップ数（デフォルト: 100）
-  int _estimationConvergenceSteps = 100;
+  /// 段階的極配置の初期極値（デフォルト: 0.75）
+  double _initialPoleValue = 0.75;
+
+  /// 段階的極配置の収束ステップ数
+  int _polePlacementConvergenceSteps = 100;
 
   /// 段階的制御入力制限の有効化フラグ
   /// 有効時: 初期段階は±1.0に制限し、推定収束後に±10.0に緩和
@@ -26,6 +29,9 @@ class STR {
 
   /// 制御入力の初期制限値（推定精度が低い初期段階）
   double _initialControlInputLimit = 1.0;
+
+  /// 制御入力制限の収束ステップ数
+  int _controlLimitConvergenceSteps = 100;
 
   /// 制御ステップ数カウンター（段階的制御用）
   int _stepCount = 0;
@@ -96,39 +102,37 @@ class STR {
   /// _enableAdaptivePolePlacement有効時: 初期段階は緩い極、収束後は所望の極
   double _getAdaptivePole1() {
     if (!_enableAdaptivePolePlacement ||
-        _stepCount >= _estimationConvergenceSteps) {
+        _stepCount >= _polePlacementConvergenceSteps) {
       return targetPole1;
     }
 
-    // 線形補間: 初期段階（p=0.75）から所望の極へ移行
-    final initialPole = 0.75;
-    final progress = _stepCount / _estimationConvergenceSteps;
-    return initialPole + (targetPole1 - initialPole) * progress;
+    // 線形補間: 初期段階から所望の極へ移行
+    final progress = _stepCount / _polePlacementConvergenceSteps;
+    return _initialPoleValue + (targetPole1 - _initialPoleValue) * progress;
   }
 
   /// 段階的に適用する極2を取得
   double _getAdaptivePole2() {
     if (!_enableAdaptivePolePlacement ||
-        _stepCount >= _estimationConvergenceSteps) {
+        _stepCount >= _polePlacementConvergenceSteps) {
       return targetPole2;
     }
 
     // 線形補間
-    final initialPole = 0.75;
-    final progress = _stepCount / _estimationConvergenceSteps;
-    return initialPole + (targetPole2 - initialPole) * progress;
+    final progress = _stepCount / _polePlacementConvergenceSteps;
+    return _initialPoleValue + (targetPole2 - _initialPoleValue) * progress;
   }
 
   /// 段階的に適用する制御入力制限を取得
   /// _enableAdaptiveControlLimit有効時: 初期段階は±1.0、収束後は±10.0
   double _getAdaptiveControlLimit() {
     if (!_enableAdaptiveControlLimit ||
-        _stepCount >= _estimationConvergenceSteps) {
+        _stepCount >= _controlLimitConvergenceSteps) {
       return controlInputLimit;
     }
 
     // 線形補間: 初期制限から最大制限へ移行
-    final progress = _stepCount / _estimationConvergenceSteps;
+    final progress = _stepCount / _controlLimitConvergenceSteps;
     return _initialControlInputLimit +
         (controlInputLimit - _initialControlInputLimit) * progress;
   }
@@ -202,10 +206,15 @@ class STR {
   }
 
   /// 段階的極配置を有効化
+  /// [initialPole] 初期段階での緩い極（デフォルト: 0.75）
   /// [convergenceSteps] 推定が収束したと判定するステップ数
-  void enableAdaptivePolePlacement({int convergenceSteps = 100}) {
+  void enableAdaptivePolePlacement({
+    double initialPole = 0.75,
+    int convergenceSteps = 100,
+  }) {
     _enableAdaptivePolePlacement = true;
-    _estimationConvergenceSteps = convergenceSteps;
+    _initialPoleValue = initialPole;
+    _polePlacementConvergenceSteps = convergenceSteps;
   }
 
   /// 段階的制御入力制限を有効化
@@ -217,7 +226,7 @@ class STR {
   }) {
     _enableAdaptiveControlLimit = true;
     _initialControlInputLimit = initialLimit;
-    _estimationConvergenceSteps = convergenceSteps;
+    _controlLimitConvergenceSteps = convergenceSteps;
   }
 
   /// 段階的制御を無効化
