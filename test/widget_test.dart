@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:adaptive_control_lab/main.dart';
 
@@ -147,5 +148,35 @@ void main() {
 
     // PIDゲイン調整が再び表示される
     expect(find.text('PID ゲイン調整'), findsOneWidget);
+  });
+
+  testWidgets('AppBar にバージョンが表示され、PackageInfo 取得後に更新される', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1.0;
+
+    PackageInfo.setMockInitialValues(
+      appName: 'adaptive_control_lab',
+      packageName: 'com.example.adaptive_control_lab',
+      version: '2.3.4',
+      buildNumber: '9',
+      buildSignature: 'mock',
+      installerStore: 'mock',
+    );
+
+    await tester.pumpWidget(const MyApp());
+
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    // 初期フォールバック値が表示される
+    expect(find.text('v1.0.0+1'), findsOneWidget);
+
+    // 非同期取得後の値に更新される
+    await tester.pumpAndSettle();
+    expect(find.text('v2.3.4+9'), findsOneWidget);
   });
 }

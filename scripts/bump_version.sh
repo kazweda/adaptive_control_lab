@@ -10,11 +10,15 @@ PUBSPEC_FILE="pubspec.yaml"
 
 # 現在のバージョンを取得
 CURRENT_VERSION=$(grep "^version:" "$PUBSPEC_FILE" | awk '{print $2}')
-VERSION_PART="${CURRENT_VERSION%+*}"  # +の前の部分を取得
-BUILD_NUMBER="${CURRENT_VERSION#+}"   # +の後の部分を取得
 
-# デフォルト: +1 の部分を増加
-BUILD_NUMBER=$((BUILD_NUMBER + 1))
+# バージョンとビルド番号を安全に分割
+if [[ "$CURRENT_VERSION" == *+* ]]; then
+  VERSION_PART="${CURRENT_VERSION%+*}"   # + の前の部分
+  BUILD_NUMBER="${CURRENT_VERSION##*+}"  # + の後の部分
+else
+  VERSION_PART="$CURRENT_VERSION"
+  BUILD_NUMBER=0
+fi
 
 # バージョンパーツ情報
 IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_PART"
@@ -25,13 +29,16 @@ case "${1:-patch}" in
     MAJOR=$((MAJOR + 1))
     MINOR=0
     PATCH=0
+    BUILD_NUMBER=1
     ;;
   minor)
     MINOR=$((MINOR + 1))
     PATCH=0
+    BUILD_NUMBER=1
     ;;
   patch)
     PATCH=$((PATCH + 1))
+    BUILD_NUMBER=$((BUILD_NUMBER + 1))
     ;;
   *)
     echo "使用方法: $0 [major|minor|patch]"

@@ -45,6 +45,7 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
                 widget.onUpdate();
               },
               description: '素早く反応する程度',
+              max: 1.5,
             ),
             const SizedBox(height: 16),
 
@@ -57,6 +58,7 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
                 widget.onUpdate();
               },
               description: 'ズレを直す強さ',
+              max: 1.0,
             ),
             const SizedBox(height: 16),
 
@@ -69,6 +71,7 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
                 widget.onUpdate();
               },
               description: '揺れを抑える程度',
+              max: 1.0,
             ),
           ],
         ),
@@ -82,6 +85,7 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
     required double value,
     required ValueChanged<double> onChanged,
     required String description,
+    double max = 1.0,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +112,7 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
         Slider(
           value: value,
           min: 0.0,
-          max: 1.5,
+          max: max,
           divisions: 100,
           onChanged: onChanged,
         ),

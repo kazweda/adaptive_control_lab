@@ -45,7 +45,10 @@ version: 1.0.0+1
 #### 動作
 
 - pubspec.yaml の version フィールドを更新
-- ビルド番号を自動インクリメント（+1, +2, ...）
+- ビルド番号は以下のルールで管理
+  - patch: 現在のビルド番号を +1
+  - minor: 1 にリセット
+  - major: 1 にリセット
 - macOS・Linux 両対応の sed コマンド使用
 
 ### 3. **lib/ui/main_screen.dart** - UI 表示機能

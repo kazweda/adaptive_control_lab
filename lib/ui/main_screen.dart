@@ -37,7 +37,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   /// パッケージ情報からバージョンを読み込む
-  void _loadPackageInfo() async {
+  Future<void> _loadPackageInfo() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       setState(() {
