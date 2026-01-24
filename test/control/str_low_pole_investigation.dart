@@ -15,10 +15,12 @@ void main() {
       const r = 1.0;
 
       final plant = Plant(a: a, b: b);
+      // NOTE: RLSパラメータは StrManager のデフォルト値に合わせる
+      // lambda: 0.995, initialCovarianceScale: 1.0
       final rls = RLS(
         parameterCount: 2,
-        lambda: 0.98,
-        initialCovarianceScale: 10.0,
+        lambda: 0.995,
+        initialCovarianceScale: 1.0,
         initialTheta: [a, b],
       );
       final str = STR(parameterCount: 2, rls: rls, targetPole1: p1);
@@ -86,10 +88,11 @@ void main() {
       const r = 1.0;
 
       final plant = Plant(a: a, b: b);
+      // NOTE: RLSパラメータは StrManager のデフォルト値に合わせる
       final rls = RLS(
         parameterCount: 2,
-        lambda: 0.98,
-        initialCovarianceScale: 10.0,
+        lambda: 0.995,
+        initialCovarianceScale: 1.0,
         initialTheta: [a, b],
       );
       final str = STR(parameterCount: 2, rls: rls, targetPole1: p1);
@@ -121,10 +124,11 @@ void main() {
       const r = 1.0;
 
       final plant = Plant(a: a, b: b);
+      // NOTE: RLSパラメータは StrManager のデフォルト値に合わせる
       final rls = RLS(
         parameterCount: 2,
-        lambda: 0.98,
-        initialCovarianceScale: 10.0,
+        lambda: 0.995,
+        initialCovarianceScale: 1.0,
         initialTheta: [a, b],
       );
       final str = STR(parameterCount: 2, rls: rls, targetPole1: p1);
