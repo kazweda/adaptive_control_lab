@@ -148,11 +148,11 @@ class PIDController { ... }
 
 ## Future Roadmap
 
-**Planned features** (see README.md):
+**Planned features** (see README.md and Issue #13):
 - Self-Tuning Regulator (STR) with Recursive Least Squares (RLS)
 - Forgetting factor for RLS
 - Pole placement control law
-- Animation exercises (elevator, drone, vehicle simulations) - see `docs/PHASE2_4_ANIMATION_EXERCISES.md`
+- Animation exercises (elevator, drone, vehicle simulations) - see Issue #13
 
 **When implementing STR**: Create `lib/control/str.dart` and `lib/control/rls.dart` following existing patterns in `plant.dart` and `pid.dart`.
 
