@@ -37,6 +37,9 @@ dependencies:
   
   # Chart library for time-series visualization
   fl_chart: ^0.70.1
+  
+  # バージョン情報表示用
+  package_info_plus: ^5.0.0
 
 dev_dependencies:
   flutter_test:
