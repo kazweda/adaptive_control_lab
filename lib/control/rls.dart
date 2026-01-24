@@ -40,6 +40,9 @@ class RLS {
   /// 大きいほど初期の学習が速い（推奨: 1000）
   final double _initialCovarianceScale;
 
+  /// 初期パラメータ推定値（reset時に復元用）
+  late final List<double> _initialTheta;
+
   /// コンストラクタ
   ///
   /// [parameterCount] パラメータ数（1次: 2, 2次: 4）
@@ -65,7 +68,8 @@ class RLS {
     }
 
     // 初期化
-    _theta = initialTheta ?? _createDefaultInitialTheta();
+    _initialTheta = initialTheta ?? _createDefaultInitialTheta();
+    _theta = List.from(_initialTheta);
     _p = _createInitialCovariance();
 
     // 初期値の長さを検証
@@ -147,8 +151,9 @@ class RLS {
   }
 
   /// RLSの状態をリセット（初期状態に戻す）
+  /// 初期パラメータ推定値を復元し、共分散行列を初期化
   void reset() {
-    _theta = _createDefaultInitialTheta();
+    _theta = List.from(_initialTheta);
     _p = _createInitialCovariance();
   }
 

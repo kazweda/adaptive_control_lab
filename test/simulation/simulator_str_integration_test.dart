@@ -52,13 +52,17 @@ void main() {
       expect(yFinal, closeTo(1.0, 0.05), reason: 'STR制御で目標値に収束すべき');
     });
 
-    test('1次系: デフォルトプラント + STR (p=0.3) - 従来方式（発散の可能性あり）', () {
+    test('1次系: デフォルトプラント + STR (p=0.3) - 改善版（RLS初期化と忘却係数の最適化）', () {
+      // Issue #50, #52 の改善により、p=0.3でも正常に制御できるようになった
+      // - initialTheta = [0.8, 0.5]（プラント真値に対応）
+      // - initialCovarianceScale = 1.0（過度な不確実性を排除）
+      // - rlsLambda = 0.995（保守的な適応で初期ノイズの影響を軽減）
       final sim = Simulator();
       sim.setStrEnabled(true);
       sim.setStrTargetPoles(0.3, 0.3);
       sim.targetValue = 1.0;
 
-      print('\n--- Simulator実行: p=0.3 (従来方式) ---');
+      print('\n--- Simulator実行: p=0.3 (改善版) ---');
 
       for (int k = 0; k < 200; k++) {
         sim.step();
@@ -71,27 +75,17 @@ void main() {
       print('偏差: ${(yFinal - 1.0).abs().toStringAsFixed(6)}');
       print('推定値: a=${aEst.toStringAsFixed(6)}, b=${bEst.toStringAsFixed(6)}');
 
-      // 従来方式ではp=0.3で大きな偏差または発散が発生する可能性がある
-      // （issue #40の事象を確認するテスト）
-      // 1. シミュレーションが停止していないことを確認（発散チェック）
+      // 改善版では安定的に制御できることを確認
+      // 1. シミュレーションが停止していないことを確認
       expect(sim.isHalted, false, reason: 'シミュレーションが停止していないこと');
 
-      // 2. RLS推定精度が低いことを確認（この問題の本質）
-      // 従来方式ではinitialCovarianceScale=100の影響で推定精度が低い
-      final bEstError = (bEst - 0.5).abs(); // プラントb=0.5との差
-      expect(
-        bEstError,
-        greaterThan(0.1),
-        reason: 'b推定精度が低いことが定常偏差の根本原因であることを確認',
-      );
+      // 2. RLS推定精度が良好であることを確認（改善版の特徴）
+      final bEstError = (bEst - 0.5).abs();
+      expect(bEstError, lessThan(0.01), reason: '改善版ではRLS推定が精密（b_est ≈ 0.5）');
 
-      // 3. 定常偏差が大きいことを確認（symptom）
+      // 3. 定常偏差が小さいことを確認（改善版の成功指標）
       final steadyStateError = (yFinal - 1.0).abs();
-      expect(
-        steadyStateError,
-        greaterThan(0.01),
-        reason: 'p=0.3での定常偏差が目標値を大きく超えている',
-      );
+      expect(steadyStateError, lessThan(0.01), reason: 'p=0.3での定常偏差が十分に小さい');
     });
 
     test('1次系: デフォルトプラント + STR (p=0.7)', () {

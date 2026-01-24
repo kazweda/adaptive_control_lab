@@ -13,7 +13,7 @@ void main() {
       test('デフォルトではRLS無効', () {
         expect(sim.rlsEnabled, false);
         expect(sim.rls, null);
-        expect(sim.rlsLambda, 0.98);
+        expect(sim.rlsLambda, 0.995);
       });
 
       test('RLS有効化で1次プラント用インスタンスが生成される', () {
@@ -191,9 +191,10 @@ void main() {
         sim.reset();
         expect(sim.historyEstimatedA.isEmpty, true);
         expect(sim.historyEstimatedB.isEmpty, true);
-        // RLSインスタンスは初期状態に戻る（thetaは初期値 [0.5, 0.3]）
-        expect(sim.rls!.estimatedA, 0.5);
-        expect(sim.rls!.estimatedB, 0.3);
+        // RLSインスタンスは初期化時の値に戻る
+        // StrManagerはUIデフォルトのプラント(a=0.8, b=0.5)に合わせた初期値を設定している
+        expect(sim.rls!.estimatedA, 0.8);
+        expect(sim.rls!.estimatedB, 0.5);
       });
     });
 

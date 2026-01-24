@@ -11,7 +11,7 @@ void main() {
         expect(mgr.strEnabled, false);
         expect(mgr.rls, isNull);
         expect(mgr.str, isNull);
-        expect(mgr.rlsLambda, 0.98);
+        expect(mgr.rlsLambda, 0.995);
         expect(mgr.strTargetPole1, 0.5);
         expect(mgr.strTargetPole2, 0.3);
         expect(mgr.useSecondOrderPlant, false);
@@ -103,7 +103,7 @@ void main() {
     group('忘却係数の変更', () {
       test('setRlsLambda：格納値が更新される', () {
         final mgr = StrManager(useSecondOrderPlant: false);
-        expect(mgr.rlsLambda, 0.98);
+        expect(mgr.rlsLambda, 0.995);
 
         mgr.setRlsLambda(0.95);
         expect(mgr.rlsLambda, 0.95);
@@ -260,9 +260,10 @@ void main() {
         final estimatedBeforeReset = mgr.rls!.estimatedA;
 
         mgr.resetControllers();
-        // リセット後はデフォルト初期値に戻る（1次系: a=0.5, b=0.3）
-        expect(mgr.rls!.estimatedA, 0.5);
-        expect(mgr.rls!.estimatedB, 0.3);
+        // リセット後は初期化時の値に戻る
+        // StrManagerはUIデフォルトのプラント(a=0.8, b=0.5)に合わせた初期値を設定している
+        expect(mgr.rls!.estimatedA, 0.8);
+        expect(mgr.rls!.estimatedB, 0.5);
         // 更新前とは異なる値になっている
         expect(mgr.rls!.estimatedA, isNot(estimatedBeforeReset));
       });
@@ -276,9 +277,10 @@ void main() {
         final estimatedBeforeReset = mgr.str!.estimatedA;
 
         mgr.resetControllers();
-        // リセット後はデフォルト初期値に戻る（1次系: a=0.5, b=0.3）
-        expect(mgr.str!.estimatedA, 0.5);
-        expect(mgr.str!.estimatedB, 0.3);
+        // リセット後は初期化時の値に戻る
+        // StrManagerはUIデフォルトのプラント(a=0.8, b=0.5)に合わせた初期値を設定している
+        expect(mgr.str!.estimatedA, 0.8);
+        expect(mgr.str!.estimatedB, 0.5);
         // 更新前とは異なる値になっている
         expect(mgr.str!.estimatedA, isNot(estimatedBeforeReset));
       });

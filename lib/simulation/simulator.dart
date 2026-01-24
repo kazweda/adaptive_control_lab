@@ -21,6 +21,8 @@ class Simulator {
   // 安全ガード（発散防止の上限）
   final double maxOutputAbs;
   final double maxControlInputAbs;
+  // RLS ウォームアップ期間（初期推定値の信頼度保持用）
+  final int rlsWarmupSteps;
   // 制御系のコンポーネント
   late PlantModel plant;
   late PIDManager _pidMgr;
@@ -49,6 +51,7 @@ class Simulator {
     this.maxHistoryLength = 5000,
     this.maxOutputAbs = 10.0,
     this.maxControlInputAbs = 10.0,
+    this.rlsWarmupSteps = 10,
   }) {
     plant = Plant(a: 0.8, b: 0.5);
     _pidMgr = PIDManager(PIDManager.createFirstOrderDefault());
@@ -299,36 +302,40 @@ class Simulator {
     plant.step(_controlInput + d);
 
     // RLS更新（STR有効時はstr.rls、無効時はスタンドアロンrls）
-    if (strEnabled && str != null) {
-      // STR有効時：STR内部のRLSを更新
-      final List<double> phi;
-      if (_useSecondOrderPlant) {
-        final p = plant as SecondOrderPlant;
-        phi = [
-          prevOutput,
-          p.previousPreviousOutput,
-          prevInput,
-          p.previousPreviousInput,
-        ];
-      } else {
-        phi = [prevOutput, prevInput];
+    // ウォームアップ期間（最初のN ステップ）はRLS更新をスキップして、
+    // initialThetaへの信頼度を保つ
+    if (stepCount >= rlsWarmupSteps) {
+      if (strEnabled && str != null) {
+        // STR有効時：STR内部のRLSを更新
+        final List<double> phi;
+        if (_useSecondOrderPlant) {
+          final p = plant as SecondOrderPlant;
+          phi = [
+            prevOutput,
+            p.previousPreviousOutput,
+            prevInput,
+            p.previousPreviousInput,
+          ];
+        } else {
+          phi = [prevOutput, prevInput];
+        }
+        str!.rls.update(phi, plant.output);
+      } else if (rlsEnabled && rls != null) {
+        // RLS単独有効時：スタンドアロンRLSを更新
+        final List<double> phi;
+        if (_useSecondOrderPlant) {
+          final p = plant as SecondOrderPlant;
+          phi = [
+            prevOutput,
+            p.previousPreviousOutput,
+            prevInput,
+            p.previousPreviousInput,
+          ];
+        } else {
+          phi = [prevOutput, prevInput];
+        }
+        rls!.update(phi, plant.output);
       }
-      str!.rls.update(phi, plant.output);
-    } else if (rlsEnabled && rls != null) {
-      // RLS単独有効時：スタンドアロンRLSを更新
-      final List<double> phi;
-      if (_useSecondOrderPlant) {
-        final p = plant as SecondOrderPlant;
-        phi = [
-          prevOutput,
-          p.previousPreviousOutput,
-          prevInput,
-          p.previousPreviousInput,
-        ];
-      } else {
-        phi = [prevOutput, prevInput];
-      }
-      rls!.update(phi, plant.output);
     }
 
     // stepCountをインクリメント（出力チェック前に実施）
@@ -367,6 +374,7 @@ class Simulator {
   }
 
   /// シミュレーションをリセット
+  /// STR/RLS の有効状態と設定値は保持され、ステップカウントと履歴のみリセット
   void reset() {
     plant.reset();
     _pidMgr.reset();
