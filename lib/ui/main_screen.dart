@@ -11,6 +11,7 @@ import 'components/controller_selector_panel.dart';
 import 'components/disturbance_panel.dart';
 import 'components/plant_params_panel.dart';
 import 'dart:async';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// メイン画面UI
 class MainScreen extends StatefulWidget {
@@ -26,11 +27,26 @@ class _MainScreenState extends State<MainScreen> {
   bool isRunning = false;
   int? _chartWindow = 200; // 200/500/1000/全履歴(null)
   int _selectedControllerIndex = 0; // 0: PID, 1: STR
+  String _appVersion = '1.0.0+1'; // アプリケーションバージョン
 
   @override
   void initState() {
     super.initState();
     simulator = Simulator();
+    _loadPackageInfo();
+  }
+
+  /// パッケージ情報からバージョンを読み込む
+  void _loadPackageInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      });
+    } catch (e) {
+      // フォールバック: pubspec.yaml から読み込まれたデフォルト値を使用
+      debugPrint('Failed to load package info: $e');
+    }
   }
 
   int _effectiveChartWindow() {
@@ -102,6 +118,19 @@ class _MainScreenState extends State<MainScreen> {
         title: const Text('制御系シミュレーション'),
         centerTitle: true,
         elevation: 2,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Center(
+              child: Text(
+                'v$_appVersion',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
