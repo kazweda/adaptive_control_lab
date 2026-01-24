@@ -25,7 +25,7 @@ MAJOR.MINOR.PATCH+BUILD_NUMBER
 version: 1.0.0+1
 ```
 
-このファイルに記載されたバージョンは、`flutter pub get` 時に確定され、すべての OS ビルドで一致します。
+このファイルに記載されたバージョンは、flutter pub get 時に確定され、すべての OS ビルドで一致します。
 
 ### 2. **scripts/bump_version.sh** - バージョン自動更新スクリプト
 
@@ -44,7 +44,7 @@ version: 1.0.0+1
 
 #### 動作
 
-- `pubspec.yaml` の version フィールドを更新
+- pubspec.yaml の version フィールドを更新
 - ビルド番号を自動インクリメント（+1, +2, ...）
 - macOS・Linux 両対応の sed コマンド使用
 
@@ -67,7 +67,7 @@ void _loadPackageInfo() async {
 
 #### UI 表示
 
-AppBar の右側（actions）に `v1.0.0+1` 形式で表示されます：
+AppBar の右側（actions）に v1.0.0+1 形式で表示されます：
 
 ```dart
 actions: [
@@ -114,7 +114,7 @@ flutter build ios --release
 
 ### CI/CD パイプラインでの統合（今後）
 
-`.github/workflows/release.yml` で以下を自動化予定：
+.github/workflows/release.yml で以下を自動化予定：
 - バージョン更新スクリプト実行
 - テスト実行確認
 - ビルド実行
@@ -125,7 +125,7 @@ flutter build ios --release
 ### アプリ起動時
 
 1. アプリを起動します
-2. AppBar 右上に `v1.0.0+1` などのバージョン表示を確認
+2. AppBar 右上に v1.0.0+1 などのバージョン表示を確認
 3. 非同期読み込みのため、初期表示はデフォルト値、その後動的更新
 
 ### コマンドラインでの確認
@@ -153,7 +153,7 @@ grep android:versionCode android/app/build.gradle.kts
    ```
 
 2. **ホットリロードが機能しない場合**：
-   - ホットリスタートを実行：`R` キー（コマンドラインから）
+   - ホットリスタートを実行：R キー（コマンドラインから）
    - または アプリを完全に再起動
 
 3. **package_info_plus が null を返す場合**：
