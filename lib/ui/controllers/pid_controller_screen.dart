@@ -108,7 +108,7 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
         Slider(
           value: value,
           min: 0.0,
-          max: 1.0,
+          max: 1.5,
           divisions: 100,
           onChanged: onChanged,
         ),
