@@ -124,9 +124,9 @@ class _MainScreenState extends State<MainScreen> {
             child: Center(
               child: Text(
                 'v$_appVersion',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           ),
