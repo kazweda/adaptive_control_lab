@@ -29,6 +29,8 @@ class PlantParamsPanel extends StatelessWidget {
     required double value,
     required ValueChanged<double> onChanged,
     required String description,
+    double min = 0.0,
+    double max = 1.0,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,8 +56,8 @@ class PlantParamsPanel extends StatelessWidget {
         const SizedBox(height: 8),
         Slider(
           value: value,
-          min: 0.0,
-          max: 1.0,
+          min: min,
+          max: max,
           divisions: 100,
           onChanged: onChanged,
         ),
@@ -122,6 +124,8 @@ class PlantParamsPanel extends StatelessWidget {
                 value: simulator.plantParamA1,
                 onChanged: onParamA1Changed,
                 description: 'y(k-1) の係数',
+                min: -2.0,
+                max: 2.0,
               ),
               const SizedBox(height: 16),
               _buildPlantParamSlider(
@@ -129,6 +133,8 @@ class PlantParamsPanel extends StatelessWidget {
                 value: simulator.plantParamA2,
                 onChanged: onParamA2Changed,
                 description: 'y(k-2) の係数',
+                min: -2.0,
+                max: 2.0,
               ),
               const SizedBox(height: 16),
               _buildPlantParamSlider(
@@ -136,6 +142,8 @@ class PlantParamsPanel extends StatelessWidget {
                 value: simulator.plantParamB1,
                 onChanged: onParamB1Changed,
                 description: 'u(k-1) の係数',
+                min: -2.0,
+                max: 2.0,
               ),
               const SizedBox(height: 16),
               _buildPlantParamSlider(
@@ -143,6 +151,8 @@ class PlantParamsPanel extends StatelessWidget {
                 value: simulator.plantParamB2,
                 onChanged: onParamB2Changed,
                 description: 'u(k-2) の係数',
+                min: -2.0,
+                max: 2.0,
               ),
             ],
           ],
