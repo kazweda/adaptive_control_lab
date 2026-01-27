@@ -103,16 +103,25 @@ void main() {
 
     testWidgets('停止時：スライダー操作でデータ範囲が変更される', (tester) async {
       final data = List<double>.generate(10, (i) => i.toDouble());
+      double scrollPos = 0.0;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: TimeSeriesPlot(
-              historyTarget: data,
-              historyOutput: data,
-              historyControl: data,
-              maxDataPoints: 3,
-              isRunning: false,
+        StatefulBuilder(
+          builder: (context, setState) => MaterialApp(
+            home: Scaffold(
+              body: TimeSeriesPlot(
+                historyTarget: data,
+                historyOutput: data,
+                historyControl: data,
+                maxDataPoints: 3,
+                isRunning: false,
+                scrollPosition: scrollPos,
+                onScrollChanged: (newPos) {
+                  setState(() {
+                    scrollPos = newPos;
+                  });
+                },
+              ),
             ),
           ),
         ),

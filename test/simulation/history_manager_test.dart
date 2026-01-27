@@ -14,12 +14,20 @@ void main() {
       expect(history.target, isEmpty);
       expect(history.output, isEmpty);
       expect(history.control, isEmpty);
+      expect(history.predictedOutput, isEmpty);
+      expect(history.residual, isEmpty);
       expect(history.estimatedA, isEmpty);
       expect(history.estimatedB, isEmpty);
       expect(history.estimatedA1, isEmpty);
       expect(history.estimatedA2, isEmpty);
       expect(history.estimatedB1, isEmpty);
       expect(history.estimatedB2, isEmpty);
+      expect(history.actualA, isEmpty);
+      expect(history.actualB, isEmpty);
+      expect(history.actualA1, isEmpty);
+      expect(history.actualA2, isEmpty);
+      expect(history.actualB1, isEmpty);
+      expect(history.actualB2, isEmpty);
     });
 
     test('addStep で基本履歴が追加される', () {
@@ -29,6 +37,8 @@ void main() {
       expect(history.target, [1.0]);
       expect(history.output, [0.5]);
       expect(history.control, [0.3]);
+      expect(history.predictedOutput, isEmpty);
+      expect(history.residual, isEmpty);
     });
 
     test('addFirstOrderEstimates で1次推定値が追加される', () {
@@ -47,6 +57,13 @@ void main() {
       expect(history.estimatedB1, [0.4]);
       expect(history.estimatedB2, [0.1]);
       expect(history.estimatedA, isEmpty); // 1次は空のまま
+    });
+
+    test('addResidual で予測値と残差が追加される', () {
+      history.addResidual(predictedValue: 0.4, residualValue: -0.1);
+
+      expect(history.predictedOutput, [0.4]);
+      expect(history.residual, [-0.1]);
     });
 
     test('maxLength を超えると自動トリミング（基本履歴）', () {
@@ -91,6 +108,46 @@ void main() {
       expect(history.estimatedB2.first, 1.3);
     });
 
+    test('maxLength を超えると自動トリミング（残差）', () {
+      for (int i = 0; i < 11; i++) {
+        history.addResidual(
+          predictedValue: i.toDouble(),
+          residualValue: -i.toDouble(),
+        );
+      }
+
+      expect(history.residual.length, 10);
+      expect(history.predictedOutput.first, 1.0);
+      expect(history.residual.first, -1);
+    });
+
+    test('真値トレースの追加とトリミング（1次）', () {
+      for (int i = 0; i < 11; i++) {
+        history.addActualFirstOrder(a: i.toDouble(), b: i.toDouble() + 0.1);
+      }
+
+      expect(history.actualA.length, 10);
+      expect(history.actualA.first, 1.0);
+      expect(history.actualB.first, 1.1);
+    });
+
+    test('真値トレースの追加とトリミング（2次）', () {
+      for (int i = 0; i < 11; i++) {
+        history.addActualSecondOrder(
+          a1: i.toDouble(),
+          a2: i.toDouble() + 0.1,
+          b1: i.toDouble() + 0.2,
+          b2: i.toDouble() + 0.3,
+        );
+      }
+
+      expect(history.actualA1.length, 10);
+      expect(history.actualA1.first, 1.0);
+      expect(history.actualA2.first, 1.1);
+      expect(history.actualB1.first, 1.2);
+      expect(history.actualB2.first, 1.3);
+    });
+
     test('clearAll で全履歴がクリアされる', () {
       history.addStep(targetValue: 1.0, outputValue: 0.5, controlValue: 0.3);
       history.addFirstOrderEstimates(a: 0.8, b: 0.5);
@@ -108,6 +165,8 @@ void main() {
       expect(history.estimatedA2, isEmpty);
       expect(history.estimatedB1, isEmpty);
       expect(history.estimatedB2, isEmpty);
+      expect(history.predictedOutput, isEmpty);
+      expect(history.residual, isEmpty);
     });
 
     test('clearRlsEstimates でRLS推定値のみクリアされる', () {

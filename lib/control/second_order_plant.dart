@@ -36,6 +36,12 @@ class SecondOrderPlant implements PlantModel {
   @override
   double get output => _output;
 
+  /// 前出力 y(k-1)（RLSのphi構築用）
+  double get previousOutput => _prevOutput;
+
+  /// 前入力 u(k-1)（RLSのphi構築用）
+  double get previousInput => _prevInput;
+
   /// 前々出力 y(k-2)（RLSのphi構築用）
   double get previousPreviousOutput => _prevPrevOutput;
 

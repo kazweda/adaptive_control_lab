@@ -80,6 +80,21 @@ void main() {
       expect(sim.historyControl.length, 50);
     });
 
+    test('RLS有効時に残差と推定履歴が記録される', () {
+      final sim = Simulator(rlsWarmupSteps: 0);
+
+      sim.setRlsEnabled(true);
+
+      for (int i = 0; i < 20; i++) {
+        sim.step();
+      }
+
+      expect(sim.historyResidual.length, sim.historyOutput.length);
+      expect(sim.historyPredictedOutput.length, sim.historyOutput.length);
+      expect(sim.historyEstimatedA, isNotEmpty);
+      expect(sim.historyActualA.length, sim.historyOutput.length);
+    });
+
     test('リセット機能の確認', () {
       final sim = Simulator();
 

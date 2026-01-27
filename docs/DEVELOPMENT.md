@@ -163,6 +163,88 @@ gh api repos/kazweda/adaptive_control_lab/pulls/6/comments | jq '.[] | {path: .p
 gh pr merge PR番号 --squash --delete-branch
 ```
 
+**重要: マージ後は必ずローカルを同期してください**
+
+```bash
+# マージ後、ローカルのmainを最新化
+git checkout main
+git pull origin main
+```
+
+GitHub Actionsがマージ後に自動でビルド番号を+1するため、次の開発前に必ず`pull`してください。
+
+---
+
+## ビルド番号管理
+
+### 自動更新の仕組み
+
+このプロジェクトでは、PRがmainブランチにマージされると、GitHub Actionsが自動的にビルド番号を+1します。
+
+**ワークフロー**: `.github/workflows/bump-build.yml`
+
+```
+1. PRをmainにマージ
+2. GitHub Actionsがトリガー
+3. pubspec.yamlのビルド番号を自動更新 (例: 1.0.1+2 → 1.0.1+3)
+4. mainにコミット & push
+```
+
+### 開発時の注意点
+
+#### ✅ やるべきこと
+- featureブランチではビルド番号を**触らない**
+- マージ後は必ず `git pull origin main` でローカルを最新化
+- 次のfeatureブランチ作成前に必ずmainブランチをpull
+
+#### ❌ やってはいけないこと
+- featureブランチでビルド番号を手動変更
+- マージ後のpullを忘れて古いmainから新ブランチを作成
+
+### 運用フロー
+
+```bash
+# 1. 最新のmainから開始
+git checkout main
+git pull origin main
+
+# 2. featureブランチで開発
+git checkout -b feature/new-feature
+# ... 実装 & テスト ...
+# ⚠️ pubspec.yamlのビルド番号は触らない
+git commit -m "feat: implement feature"
+git push origin feature/new-feature
+
+# 3. PR作成
+gh pr create --title "feat: New feature" --body-file pr.md
+
+# 4. レビュー & マージ
+gh pr merge XX --squash --delete-branch
+
+# 5. GitHub Actionsがビルド番号を自動更新（待機）
+
+# 6. ローカルを同期（重要！）
+git checkout main
+git pull origin main
+
+# 7. 次の開発へ
+git checkout -b feature/next-feature
+```
+
+### バージョン番号（MAJOR.MINOR.PATCH）の更新
+
+ビルド番号は自動更新されますが、セマンティックバージョン（MAJOR.MINOR.PATCH）は手動更新です。
+
+```bash
+# リリース時にバージョンを更新
+./scripts/bump_version.sh [major|minor|patch]
+
+# 例: 1.0.1 → 1.0.2 (ビルド番号は1にリセット)
+./scripts/bump_version.sh patch
+
+# 詳細は docs/VERSION_MANAGEMENT.md を参照
+```
+
 ---
 
 ## コード品質維持
@@ -369,7 +451,9 @@ flutter analyze lib/control/plant.dart
 - [Flutter コーディング規約](https://dart.dev/guides/language/effective-dart)
 - [GitHub Flow](https://guides.github.com/introduction/flow/)
 - [Conventional Commits](https://www.conventionalcommits.org/)
+- [STR制御チューニングガイド](./STR_TUNING_GUIDE.md) - ソフトスタート機能と2次プラント制御
+- [バージョン管理ガイド](./VERSION_MANAGEMENT.md) - セマンティックバージョニングとビルド番号
 
 ---
 
-**最終更新**: 2026年1月12日
+**最終更新**: 2026年1月27日
