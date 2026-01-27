@@ -451,7 +451,9 @@ flutter analyze lib/control/plant.dart
 - [Flutter コーディング規約](https://dart.dev/guides/language/effective-dart)
 - [GitHub Flow](https://guides.github.com/introduction/flow/)
 - [Conventional Commits](https://www.conventionalcommits.org/)
+- [STR制御チューニングガイド](./STR_TUNING_GUIDE.md) - ソフトスタート機能と2次プラント制御
+- [バージョン管理ガイド](./VERSION_MANAGEMENT.md) - セマンティックバージョニングとビルド番号
 
 ---
 
-**最終更新**: 2026年1月12日
+**最終更新**: 2026年1月27日
