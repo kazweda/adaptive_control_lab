@@ -308,8 +308,8 @@ class Simulator {
     double? prevPrevInput;
     if (_useSecondOrderPlant) {
       final p = plant as SecondOrderPlant;
-      prevPrevOutput = p.previousPreviousOutput;
-      prevPrevInput = p.previousPreviousInput;
+      prevPrevOutput = p.previousOutput; // y(k-1)
+      prevPrevInput = p.previousInput; // u(k-1)
     }
 
     // 推定器が有効な場合は予測値を計算（RLS更新前の推定値を使用）

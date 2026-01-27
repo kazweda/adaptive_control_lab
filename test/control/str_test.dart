@@ -360,5 +360,99 @@ void main() {
         }
       });
     });
+
+    group('ソフトスタート機能', () {
+      test('デフォルトではソフトスタートは無効', () {
+        final str = STR(parameterCount: 2, rls: rls1, targetPole1: 0.5);
+
+        // 初期ステップでもスケールは1.0（無効時）
+        final u = str.computeControl(0.0, 1.0);
+        // ソフトスタートが無効なので、制御入力は通常通り計算される
+        expect(u, isNotNull);
+      });
+
+      test('enableSoftStartで有効化されること', () {
+        final str = STR(parameterCount: 2, rls: rls1, targetPole1: 0.5);
+        str.enableSoftStart(initialScale: 0.2, steps: 10);
+
+        // 初期ステップ（0ステップ目）でのスケールは0.2
+        final u0 = str.computeControl(0.0, 1.0);
+
+        // ソフトスタートが有効なので、制御入力はスケールされる
+        // 5ステップ目でのスケールは 0.2 + (1.0 - 0.2) * 5/10 = 0.6
+        for (int i = 1; i < 5; i++) {
+          str.computeControl(0.0, 1.0);
+        }
+        final u5 = str.computeControl(0.0, 1.0);
+
+        // 10ステップ以降はスケール1.0（ソフトスタート完了）
+        for (int i = 6; i < 10; i++) {
+          str.computeControl(0.0, 1.0);
+        }
+        final u10 = str.computeControl(0.0, 1.0);
+
+        // u0 < u5 < u10 の順でスケールが大きくなるはず（絶対値で比較）
+        expect(u0.abs(), lessThan(u5.abs()));
+        expect(u5.abs(), lessThanOrEqualTo(u10.abs()));
+      });
+
+      test('ソフトスタートのスケール係数が線形補間されること', () {
+        final str = STR(parameterCount: 2, rls: rls1, targetPole1: 0.5);
+        str.enableSoftStart(initialScale: 0.1, steps: 20);
+
+        final outputs = <double>[];
+        for (int i = 0; i < 25; i++) {
+          final u = str.computeControl(0.0, 1.0);
+          outputs.add(u.abs());
+        }
+
+        // 0ステップ目のスケールは0.1
+        // 10ステップ目のスケールは 0.1 + (1.0 - 0.1) * 10/20 = 0.55
+        // 20ステップ目以降のスケールは1.0
+        // 制御入力の絶対値は単調増加するはず（スケールが増えるため）
+        for (int i = 0; i < 19; i++) {
+          expect(outputs[i], lessThanOrEqualTo(outputs[i + 1]));
+        }
+
+        // 20ステップ以降は同じ値（スケール1.0で安定）
+        expect(outputs[20], closeTo(outputs[24], 0.001));
+      });
+
+      test('2次系でソフトスタートが機能すること', () {
+        final str = STR(
+          parameterCount: 4,
+          rls: rls2,
+          targetPole1: 0.5,
+          targetPole2: 0.3,
+        );
+        str.enableSoftStart(initialScale: 0.2, steps: 30);
+
+        double y1 = 0.0, y2 = 0.0, u1 = 0.0, u2 = 0.0;
+        final a1 = 1.6, a2 = -0.64, b1 = 0.5, b2 = 0.2;
+
+        final controlInputs = <double>[];
+
+        // 30ステップ実行して制御入力を記録
+        for (int i = 0; i < 30; i++) {
+          final u = str.computeControl(y1, 1.0);
+          controlInputs.add(u);
+
+          final nextY = a1 * y1 + a2 * y2 + b1 * u1 + b2 * u2;
+          str.rls.update([y1, y2, u1, u2], nextY);
+
+          y2 = y1;
+          y1 = nextY;
+          u2 = u1;
+          u1 = u;
+        }
+
+        // 初期の制御入力は小さく、徐々に大きくなるはず
+        expect(controlInputs.first.abs(), lessThan(controlInputs[15].abs()));
+        expect(
+          controlInputs[15].abs(),
+          lessThanOrEqualTo(controlInputs.last.abs()),
+        );
+      });
+    });
   });
 }
