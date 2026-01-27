@@ -171,35 +171,35 @@ git checkout main
 git pull origin main
 ```
 
-GitHub Actionsがマージ後に自動でビルド番号を+1するため、次の開発前に必ず`pull`してください。
-
 ---
 
 ## ビルド番号管理
 
-### 自動更新の仕組み
+### 手動更新の運用
 
-このプロジェクトでは、PRがmainブランチにマージされると、GitHub Actionsが自動的にビルド番号を+1します。
+このプロジェクトでは、PRを作成する前にfeatureブランチでビルド番号を手動で+1します。
 
-**ワークフロー**: `.github/workflows/bump-build.yml`
+#### 更新タイミング
 
+**PR作成前**に、featureブランチ内で以下を実行してください:
+
+```bash
+# pubspec.yamlのビルド番号を手動で+1
+# 例: version: 1.0.1+3 → version: 1.0.1+4
 ```
-1. PRをmainにマージ
-2. GitHub Actionsがトリガー
-3. pubspec.yamlのビルド番号を自動更新 (例: 1.0.1+2 → 1.0.1+3)
-4. mainにコミット & push
-```
 
-### 開発時の注意点
+エディタで `pubspec.yaml` の `version:` 行を編集し、`+` の後の数字をインクリメントします。
+
+#### 開発時の注意点
 
 #### ✅ やるべきこと
-- featureブランチではビルド番号を**触らない**
-- マージ後は必ず `git pull origin main` でローカルを最新化
-- 次のfeatureブランチ作成前に必ずmainブランチをpull
+- **PR作成前**に必ずビルド番号を+1
+- 最新のmainブランチから開発開始
+- マージ後は `git pull origin main` でローカルを最新化
 
 #### ❌ やってはいけないこと
-- featureブランチでビルド番号を手動変更
-- マージ後のpullを忘れて古いmainから新ブランチを作成
+- ビルド番号の更新を忘れたままPR作成
+- 古いmainブランチから新ブランチを作成
 
 ### 運用フロー
 
@@ -211,29 +211,60 @@ git pull origin main
 # 2. featureブランチで開発
 git checkout -b feature/new-feature
 # ... 実装 & テスト ...
-# ⚠️ pubspec.yamlのビルド番号は触らない
-git commit -m "feat: implement feature"
+
+# 3. 実装内容をコミット
+git status
+git add .
+git commit -m "feat: Implement new feature"
+
+# 4. PR作成前にビルド番号を更新（重要！）
+# pubspec.yaml を編集: version: 1.0.1+3 → version: 1.0.1+4
+
+git add pubspec.yaml
+git commit -m "chore: bump build number to +4"
 git push origin feature/new-feature
 
-# 3. PR作成
+# 5. PR作成
 gh pr create --title "feat: New feature" --body-file pr.md
 
-# 4. レビュー & マージ
+# 6. レビュー & マージ
 gh pr merge XX --squash --delete-branch
 
-# 5. GitHub Actionsがビルド番号を自動更新（待機）
-
-# 6. ローカルを同期（重要！）
+# 7. ローカルを同期
 git checkout main
 git pull origin main
 
-# 7. 次の開発へ
+# 8. 次の開発へ
 git checkout -b feature/next-feature
+```
+
+### ビルド番号のコンフリクト対応
+
+複数のfeatureブランチが並行開発されている場合、ビルド番号が衝突することがあります。
+
+**コンフリクト発生時の手順**:
+
+```bash
+# 1. 最新のmainを取り込む
+git checkout feature/your-feature
+git fetch origin
+git merge origin/main
+
+# 2. pubspec.yamlでコンフリクト発生
+# エディタで pubspec.yaml を開き、最新のビルド番号を確認
+# 例: mainが+5になっている場合、自分のブランチは+6に更新
+
+# 3. コンフリクトを解決してコミット
+git add pubspec.yaml
+git commit -m "chore: resolve build number conflict, bump to +6"
+
+# 4. 強制プッシュ（または通常のpush）
+git push origin feature/your-feature
 ```
 
 ### バージョン番号（MAJOR.MINOR.PATCH）の更新
 
-ビルド番号は自動更新されますが、セマンティックバージョン（MAJOR.MINOR.PATCH）は手動更新です。
+セマンティックバージョン（MAJOR.MINOR.PATCH）は、リリース時に更新します。
 
 ```bash
 # リリース時にバージョンを更新

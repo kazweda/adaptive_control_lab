@@ -15,7 +15,7 @@ MAJOR.MINOR.PATCH+BUILD_NUMBER
 - **MAJOR**: 互換性を損なう変更
 - **MINOR**: 後方互換的な機能追加
 - **PATCH**: バグ修正
-- **BUILD_NUMBER**: ビルド番号（自動インクリメント）
+- **BUILD_NUMBER**: ビルド番号（PR作成前に手動で+1）
 
 ## ファイル構成
 
