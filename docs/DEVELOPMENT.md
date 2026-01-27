@@ -171,8 +171,6 @@ git checkout main
 git pull origin main
 ```
 
-GitHub Actionsがマージ後に自動でビルド番号を+1するため、次の開発前に必ず`pull`してください。
-
 ---
 
 ## ビルド番号管理
@@ -214,25 +212,54 @@ git pull origin main
 git checkout -b feature/new-feature
 # ... 実装 & テスト ...
 
-# 3. PR作成前にビルド番号を更新（重要！）
+# 3. 実装内容をコミット
+git status
+git add .
+git commit -m "feat: Implement new feature"
+
+# 4. PR作成前にビルド番号を更新（重要！）
 # pubspec.yaml を編集: version: 1.0.1+3 → version: 1.0.1+4
 
 git add pubspec.yaml
 git commit -m "chore: bump build number to +4"
 git push origin feature/new-feature
 
-# 4. PR作成
+# 5. PR作成
 gh pr create --title "feat: New feature" --body-file pr.md
 
-# 5. レビュー & マージ
+# 6. レビュー & マージ
 gh pr merge XX --squash --delete-branch
 
-# 6. ローカルを同期
+# 7. ローカルを同期
 git checkout main
 git pull origin main
 
-# 7. 次の開発へ
+# 8. 次の開発へ
 git checkout -b feature/next-feature
+```
+
+### ビルド番号のコンフリクト対応
+
+複数のfeatureブランチが並行開発されている場合、ビルド番号が衝突することがあります。
+
+**コンフリクト発生時の手順**:
+
+```bash
+# 1. 最新のmainを取り込む
+git checkout feature/your-feature
+git fetch origin
+git merge origin/main
+
+# 2. pubspec.yamlでコンフリクト発生
+# エディタで pubspec.yaml を開き、最新のビルド番号を確認
+# 例: mainが+5になっている場合、自分のブランチは+6に更新
+
+# 3. コンフリクトを解決してコミット
+git add pubspec.yaml
+git commit -m "chore: resolve build number conflict, bump to +6"
+
+# 4. 強制プッシュ（または通常のpush）
+git push origin feature/your-feature
 ```
 
 ### バージョン番号（MAJOR.MINOR.PATCH）の更新
