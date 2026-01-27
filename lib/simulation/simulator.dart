@@ -76,12 +76,20 @@ class Simulator {
   List<double> get historyTarget => _historyMgr.target;
   List<double> get historyOutput => _historyMgr.output;
   List<double> get historyControl => _historyMgr.control;
+  List<double> get historyPredictedOutput => _historyMgr.predictedOutput;
+  List<double> get historyResidual => _historyMgr.residual;
   List<double> get historyEstimatedA => _historyMgr.estimatedA;
   List<double> get historyEstimatedB => _historyMgr.estimatedB;
   List<double> get historyEstimatedA1 => _historyMgr.estimatedA1;
   List<double> get historyEstimatedA2 => _historyMgr.estimatedA2;
   List<double> get historyEstimatedB1 => _historyMgr.estimatedB1;
   List<double> get historyEstimatedB2 => _historyMgr.estimatedB2;
+  List<double> get historyActualA => _historyMgr.actualA;
+  List<double> get historyActualB => _historyMgr.actualB;
+  List<double> get historyActualA1 => _historyMgr.actualA1;
+  List<double> get historyActualA2 => _historyMgr.actualA2;
+  List<double> get historyActualB1 => _historyMgr.actualB1;
+  List<double> get historyActualB2 => _historyMgr.actualB2;
 
   // === RLS推定値のゲッター ===
   bool get rlsEnabled => _strMgr.rlsEnabled;
@@ -296,44 +304,78 @@ class Simulator {
     // プラント更新前の過去値を保存（RLS更新用）
     final prevOutput = plant.output;
     final prevInput = _controlInput;
+    double? prevPrevOutput;
+    double? prevPrevInput;
+    if (_useSecondOrderPlant) {
+      final p = plant as SecondOrderPlant;
+      prevPrevOutput = p.previousPreviousOutput;
+      prevPrevInput = p.previousPreviousInput;
+    }
+
+    // 推定器が有効な場合は予測値を計算（RLS更新前の推定値を使用）
+    double? predicted;
+    List<double>? phi;
+    final bool hasEstimator =
+        (strEnabled && str != null) || (rlsEnabled && rls != null);
+
+    if (hasEstimator) {
+      if (_useSecondOrderPlant) {
+        phi = [
+          prevOutput,
+          prevPrevOutput ?? 0.0,
+          prevInput,
+          prevPrevInput ?? 0.0,
+        ];
+        final a1 = strEnabled && str != null
+            ? str!.estimatedA1
+            : (rlsEnabled && rls != null ? rls!.estimatedA1 : 0.0);
+        final a2 = strEnabled && str != null
+            ? str!.estimatedA2
+            : (rlsEnabled && rls != null ? rls!.estimatedA2 : 0.0);
+        final b1 = strEnabled && str != null
+            ? str!.estimatedB1
+            : (rlsEnabled && rls != null ? rls!.estimatedB1 : 0.0);
+        final b2 = strEnabled && str != null
+            ? str!.estimatedB2
+            : (rlsEnabled && rls != null ? rls!.estimatedB2 : 0.0);
+        predicted =
+            a1 * prevOutput +
+            a2 * (prevPrevOutput ?? 0.0) +
+            b1 * prevInput +
+            b2 * (prevPrevInput ?? 0.0);
+      } else {
+        phi = [prevOutput, prevInput];
+        final a = strEnabled && str != null
+            ? str!.estimatedA
+            : (rlsEnabled && rls != null ? rls!.estimatedA : 0.0);
+        final b = strEnabled && str != null
+            ? str!.estimatedB
+            : (rlsEnabled && rls != null ? rls!.estimatedB : 0.0);
+        predicted = a * prevOutput + b * prevInput;
+      }
+    }
 
     // プラントを更新
     final d = _distMgr.getNext(); // 外乱マネージャーから外乱値を取得
     plant.step(_controlInput + d);
 
+    if (predicted != null) {
+      final residual = plant.output - predicted;
+      _historyMgr.addResidual(
+        predictedValue: predicted,
+        residualValue: residual,
+      );
+    }
+
     // RLS更新（STR有効時はstr.rls、無効時はスタンドアロンrls）
     // ウォームアップ期間（最初のN ステップ）はRLS更新をスキップして、
     // initialThetaへの信頼度を保つ
-    if (stepCount >= rlsWarmupSteps) {
+    if (stepCount >= rlsWarmupSteps && phi != null) {
       if (strEnabled && str != null) {
         // STR有効時：STR内部のRLSを更新
-        final List<double> phi;
-        if (_useSecondOrderPlant) {
-          final p = plant as SecondOrderPlant;
-          phi = [
-            prevOutput,
-            p.previousPreviousOutput,
-            prevInput,
-            p.previousPreviousInput,
-          ];
-        } else {
-          phi = [prevOutput, prevInput];
-        }
         str!.rls.update(phi, plant.output);
       } else if (rlsEnabled && rls != null) {
         // RLS単独有効時：スタンドアロンRLSを更新
-        final List<double> phi;
-        if (_useSecondOrderPlant) {
-          final p = plant as SecondOrderPlant;
-          phi = [
-            prevOutput,
-            p.previousPreviousOutput,
-            prevInput,
-            p.previousPreviousInput,
-          ];
-        } else {
-          phi = [prevOutput, prevInput];
-        }
         rls!.update(phi, plant.output);
       }
     }
@@ -355,8 +397,34 @@ class Simulator {
       controlValue: _controlInput,
     );
 
+    // プラント真値の履歴を保持（途中変更の可視化用）
+    if (_useSecondOrderPlant) {
+      _historyMgr.addActualSecondOrder(
+        a1: plantParamA1,
+        a2: plantParamA2,
+        b1: plantParamB1,
+        b2: plantParamB2,
+      );
+    } else {
+      _historyMgr.addActualFirstOrder(a: plantParamA, b: plantParamB);
+    }
+
     // RLS推定値履歴に追加
-    if (rlsEnabled && rls != null) {
+    if (strEnabled && str != null) {
+      if (_useSecondOrderPlant) {
+        _historyMgr.addSecondOrderEstimates(
+          a1: str!.estimatedA1,
+          a2: str!.estimatedA2,
+          b1: str!.estimatedB1,
+          b2: str!.estimatedB2,
+        );
+      } else {
+        _historyMgr.addFirstOrderEstimates(
+          a: str!.estimatedA,
+          b: str!.estimatedB,
+        );
+      }
+    } else if (rlsEnabled && rls != null) {
       if (_useSecondOrderPlant) {
         _historyMgr.addSecondOrderEstimates(
           a1: rls!.estimatedA1,

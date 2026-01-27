@@ -33,6 +33,15 @@ class STR {
   /// 制御入力制限の収束ステップ数
   int _controlLimitConvergenceSteps = 100;
 
+  /// 初期ステップでのソフトスタートを有効化
+  bool _enableSoftStart = false;
+
+  /// ソフトスタート期間（ステップ数）
+  int _softStartSteps = 30;
+
+  /// ソフトスタート時の入力スケール初期値
+  double _softStartInitialScale = 0.2;
+
   /// 制御ステップ数カウンター（段階的制御用）
   int _stepCount = 0;
 
@@ -87,10 +96,14 @@ class STR {
     // 段階的制御入力制限
     final limit = _getAdaptiveControlLimit();
 
+    // 初期のソフトスタート（2次系初期推定の不確実性を緩和）
+    final softScale = _getSoftStartScale();
+    final scaled = u * softScale;
+
     // 制御入力の安全制限（オーバーフロー対策）
     // 初期的に推定パラメータが不確定なため、大きな制御入力が発生する可能性がある
     // 最初のステップ付近では慎重に制御する
-    final clamped = u.clamp(-limit, limit).toDouble();
+    final clamped = scaled.clamp(-limit, limit).toDouble();
 
     // 過去値を記録（実際に適用する値で更新する）
     _updateHistory(y, clamped);
@@ -135,6 +148,15 @@ class STR {
     final progress = _stepCount / _controlLimitConvergenceSteps;
     return _initialControlInputLimit +
         (controlInputLimit - _initialControlInputLimit) * progress;
+  }
+
+  /// ソフトスタート用スケーリング係数を取得
+  double _getSoftStartScale() {
+    if (!_enableSoftStart || _stepCount >= _softStartSteps) {
+      return 1.0;
+    }
+    final progress = _stepCount / _softStartSteps;
+    return _softStartInitialScale + (1.0 - _softStartInitialScale) * progress;
   }
 
   /// 1次プラント用制御則（極配置 + リファレンスゲイン）
@@ -227,6 +249,13 @@ class STR {
     _enableAdaptiveControlLimit = true;
     _initialControlInputLimit = initialLimit;
     _controlLimitConvergenceSteps = convergenceSteps;
+  }
+
+  /// ソフトスタートを有効化（初期ステップで入力をスケールダウン）
+  void enableSoftStart({double initialScale = 0.2, int steps = 30}) {
+    _enableSoftStart = true;
+    _softStartInitialScale = initialScale;
+    _softStartSteps = steps;
   }
 
   /// 段階的制御を無効化

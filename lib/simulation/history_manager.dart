@@ -11,6 +11,10 @@ class HistoryManager {
   List<double> output = [];
   List<double> control = [];
 
+  // 予測値と残差（RLS/STRの診断用）
+  List<double> predictedOutput = [];
+  List<double> residual = [];
+
   // 1次プラント用のRLS推定値履歴
   List<double> estimatedA = [];
   List<double> estimatedB = [];
@@ -20,6 +24,14 @@ class HistoryManager {
   List<double> estimatedA2 = [];
   List<double> estimatedB1 = [];
   List<double> estimatedB2 = [];
+
+  // 真値のトレース（途中でプラントパラメータを変更した場合の可視化用）
+  List<double> actualA = [];
+  List<double> actualB = [];
+  List<double> actualA1 = [];
+  List<double> actualA2 = [];
+  List<double> actualB1 = [];
+  List<double> actualB2 = [];
 
   /// コンストラクタ
   HistoryManager({this.maxLength = 5000});
@@ -39,6 +51,20 @@ class HistoryManager {
       target.removeAt(0);
       output.removeAt(0);
       control.removeAt(0);
+    }
+  }
+
+  /// 予測値と残差を追加（RLS/STRの診断用）
+  void addResidual({
+    required double predictedValue,
+    required double residualValue,
+  }) {
+    predictedOutput.add(predictedValue);
+    residual.add(residualValue);
+
+    if (residual.length > maxLength) {
+      predictedOutput.removeAt(0);
+      residual.removeAt(0);
     }
   }
 
@@ -75,11 +101,50 @@ class HistoryManager {
     }
   }
 
+  /// 1次プラントの真値を追加
+  void addActualFirstOrder({required double a, required double b}) {
+    actualA.add(a);
+    actualB.add(b);
+
+    if (actualA.length > maxLength) {
+      actualA.removeAt(0);
+      actualB.removeAt(0);
+    }
+  }
+
+  /// 2次プラントの真値を追加
+  void addActualSecondOrder({
+    required double a1,
+    required double a2,
+    required double b1,
+    required double b2,
+  }) {
+    actualA1.add(a1);
+    actualA2.add(a2);
+    actualB1.add(b1);
+    actualB2.add(b2);
+
+    if (actualA1.length > maxLength) {
+      actualA1.removeAt(0);
+      actualA2.removeAt(0);
+      actualB1.removeAt(0);
+      actualB2.removeAt(0);
+    }
+  }
+
   /// 全履歴をクリア
   void clearAll() {
     target.clear();
     output.clear();
     control.clear();
+    predictedOutput.clear();
+    residual.clear();
+    actualA.clear();
+    actualB.clear();
+    actualA1.clear();
+    actualA2.clear();
+    actualB1.clear();
+    actualB2.clear();
     clearRlsEstimates();
   }
 
@@ -91,6 +156,8 @@ class HistoryManager {
     estimatedA2.clear();
     estimatedB1.clear();
     estimatedB2.clear();
+    predictedOutput.clear();
+    residual.clear();
   }
 
   /// 履歴のステップ数を取得
@@ -101,6 +168,7 @@ class HistoryManager {
   String toString() {
     return 'HistoryManager(length: $length/$maxLength, '
         'hasRlsFirstOrder: ${estimatedA.isNotEmpty}, '
-        'hasRlsSecondOrder: ${estimatedA1.isNotEmpty})';
+        'hasRlsSecondOrder: ${estimatedA1.isNotEmpty}, '
+        'hasResidual: ${residual.isNotEmpty})';
   }
 }

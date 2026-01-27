@@ -10,6 +10,7 @@ import 'components/target_value_panel.dart';
 import 'components/controller_selector_panel.dart';
 import 'components/disturbance_panel.dart';
 import 'components/plant_params_panel.dart';
+import 'diagnostics_plot.dart';
 import 'dart:async';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -28,6 +29,7 @@ class _MainScreenState extends State<MainScreen> {
   int? _chartWindow = 200; // 200/500/1000/全履歴(null)
   int _selectedControllerIndex = 0; // 0: PID, 1: STR
   String _appVersion = '1.0.0+1'; // アプリケーションバージョン
+  double _scrollPosition = 0.0; // 共通スクロール位置（3つのプロット同期用）
 
   @override
   void initState() {
@@ -85,6 +87,13 @@ class _MainScreenState extends State<MainScreen> {
     simulationTimer?.cancel();
     setState(() {
       isRunning = false;
+      // 停止時に最新データが見える位置に初期化
+      final dataLength = simulator.historyTarget.length;
+      final maxScrollIndex = (dataLength - _effectiveChartWindow()).clamp(
+        0,
+        dataLength,
+      );
+      _scrollPosition = maxScrollIndex.toDouble();
     });
   }
 
@@ -156,6 +165,42 @@ class _MainScreenState extends State<MainScreen> {
                 // 実行中は安全のため All 選択時でも 200 に制限
                 maxDataPoints: _effectiveChartWindow(),
                 isRunning: isRunning,
+                scrollPosition: _scrollPosition,
+                onScrollChanged: (value) {
+                  setState(() {
+                    _scrollPosition = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // === 残差プロット ===
+              ResidualPlot(
+                residual: simulator.historyResidual,
+                maxDataPoints: _effectiveChartWindow(),
+                isRunning: isRunning,
+                scrollPosition: _scrollPosition,
+              ),
+              const SizedBox(height: 16),
+
+              // === 推定パラメータトレース ===
+              ParameterTracePlot(
+                isSecondOrder: simulator.isSecondOrderPlant,
+                maxDataPoints: _effectiveChartWindow(),
+                isRunning: isRunning,
+                scrollPosition: _scrollPosition,
+                estA: simulator.historyEstimatedA,
+                estB: simulator.historyEstimatedB,
+                estA1: simulator.historyEstimatedA1,
+                estA2: simulator.historyEstimatedA2,
+                estB1: simulator.historyEstimatedB1,
+                estB2: simulator.historyEstimatedB2,
+                actualA: simulator.historyActualA,
+                actualB: simulator.historyActualB,
+                actualA1: simulator.historyActualA1,
+                actualA2: simulator.historyActualA2,
+                actualB1: simulator.historyActualB1,
+                actualB2: simulator.historyActualB2,
               ),
               const SizedBox(height: 24),
 

@@ -13,6 +13,10 @@ class TimeSeriesPlot extends StatefulWidget {
   final int maxDataPoints;
   // シミュレーション実行中フラグ（停止時はスクロール可能に）
   final bool isRunning;
+  // スクロール位置（外部から制御）
+  final double scrollPosition;
+  // スクロール位置変更コールバック
+  final ValueChanged<double>? onScrollChanged;
 
   const TimeSeriesPlot({
     super.key,
@@ -21,6 +25,8 @@ class TimeSeriesPlot extends StatefulWidget {
     required this.historyControl,
     this.maxDataPoints = 200,
     this.isRunning = false,
+    this.scrollPosition = 0.0,
+    this.onScrollChanged,
   });
 
   @override
@@ -28,56 +34,6 @@ class TimeSeriesPlot extends StatefulWidget {
 }
 
 class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
-  // 停止時のスクロール位置（0 = 最初のデータから開始）
-  late double scrollPosition;
-
-  @override
-  void initState() {
-    super.initState();
-    scrollPosition = 0.0;
-  }
-
-  @override
-  void didUpdateWidget(TimeSeriesPlot oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // 実行中 → 停止 に遷移したタイミングで、最新データが見える位置に初期化
-    if (oldWidget.isRunning && !widget.isRunning) {
-      final int dataLength = widget.historyTarget.length;
-      final int maxScrollIndex = (dataLength - widget.maxDataPoints).clamp(
-        0,
-        dataLength,
-      );
-      scrollPosition = maxScrollIndex.toDouble();
-      return;
-    }
-
-    // データが追加された場合、停止時は常に最新データが見えるようスクロール位置を更新
-    if (!widget.isRunning &&
-        widget.historyTarget.length > oldWidget.historyTarget.length) {
-      final int dataLength = widget.historyTarget.length;
-      final int maxScrollIndex = (dataLength - widget.maxDataPoints).clamp(
-        0,
-        dataLength,
-      );
-      if (maxScrollIndex > 0) {
-        scrollPosition = maxScrollIndex.toDouble();
-      }
-    }
-
-    // maxDataPoints が変更された場合、スクロール位置を調整
-    if (widget.maxDataPoints != oldWidget.maxDataPoints) {
-      final int dataLength = widget.historyTarget.length;
-      final int maxScrollIndex = (dataLength - widget.maxDataPoints).clamp(
-        0,
-        dataLength,
-      );
-      if (scrollPosition > maxScrollIndex) {
-        scrollPosition = maxScrollIndex.toDouble();
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     // データが空または不整合な場合は説明を表示
@@ -173,25 +129,25 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
 
   /// スクロールバーを構築
   Widget _buildScrollBar(int maxScrollPosition) {
+    final scrollPos = widget.scrollPosition.clamp(
+      0.0,
+      maxScrollPosition.toDouble(),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'スクロール位置: ${scrollPosition.toInt()} / $maxScrollPosition',
+          'スクロール位置: ${scrollPos.toInt()} / $maxScrollPosition',
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 8),
         Slider(
           min: 0,
           max: maxScrollPosition.toDouble(),
-          value: scrollPosition,
-          onChanged: (value) {
-            setState(() {
-              scrollPosition = value;
-            });
-          },
+          value: scrollPos,
+          onChanged: widget.onScrollChanged,
           divisions: maxScrollPosition > 0 ? maxScrollPosition : null,
-          label: scrollPosition.toInt().toString(),
+          label: scrollPos.toInt().toString(),
         ),
       ],
     );
@@ -215,7 +171,14 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
       endIndex = (dataLength == 0) ? 0 : (dataLength - 1);
     } else {
       // 停止中：スクロール位置から maxDataPoints 点を表示
-      startIndex = scrollPosition.toInt();
+      final scrollPos = widget.scrollPosition.clamp(
+        0.0,
+        (dataLength - widget.maxDataPoints).toDouble().clamp(
+          0.0,
+          double.infinity,
+        ),
+      );
+      startIndex = scrollPos.toInt();
       endIndex = (startIndex + widget.maxDataPoints - 1).clamp(
         0,
         dataLength - 1,

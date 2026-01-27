@@ -131,5 +131,9 @@ class StrManager {
       targetPole1: strTargetPole1,
       targetPole2: strTargetPole2,
     );
+    // 2次系は初期推定が不確かなのでソフトスタートを有効化
+    if (paramCount == 4) {
+      str!.enableSoftStart(initialScale: 0.2, steps: 30);
+    }
   }
 }
