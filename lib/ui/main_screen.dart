@@ -74,9 +74,21 @@ class _MainScreenState extends State<MainScreen> {
 
     // 50ms ごとにシミュレーションを進める
     simulationTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
-      setState(() {
-        simulator.step();
-      });
+      simulator.step();
+      if (simulator.isHalted) {
+        simulationTimer?.cancel();
+        final dataLength = simulator.historyTarget.length;
+        final maxScrollIndex = (dataLength - _effectiveChartWindow()).clamp(
+          0,
+          dataLength,
+        );
+        setState(() {
+          isRunning = false;
+          _scrollPosition = maxScrollIndex.toDouble();
+        });
+      } else {
+        setState(() {});
+      }
     });
   }
 
