@@ -74,6 +74,10 @@ class _MainScreenState extends State<MainScreen> {
 
     // 50ms ごとにシミュレーションを進める
     simulationTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (!mounted) {
+        simulationTimer?.cancel();
+        return;
+      }
       simulator.step();
       if (simulator.isHalted) {
         simulationTimer?.cancel();
