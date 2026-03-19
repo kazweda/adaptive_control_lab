@@ -252,6 +252,70 @@ void main() {
       expect(sim.historyTarget.length, historyLengthBefore);
     });
 
+    test('maxSteps到達で自動ハルトする', () {
+      final sim = Simulator(maxSteps: 5);
+
+      for (int i = 0; i < 10; i++) {
+        sim.step();
+        if (sim.isHalted) break;
+      }
+
+      expect(sim.isHalted, isTrue);
+      expect(sim.stepCount, 5);
+      expect(sim.historyTarget.length, 5);
+      expect(sim.historyOutput.length, 5);
+    });
+
+    test('maxSteps到達時は最終ステップのデータが記録される', () {
+      final sim = Simulator(maxSteps: 3);
+
+      for (int i = 0; i < 3; i++) {
+        sim.step();
+      }
+
+      // 3ステップ分のデータがすべて記録されていること
+      expect(sim.stepCount, 3);
+      expect(sim.historyOutput.length, 3);
+      // 最終出力値が記録されている（0でない）
+      expect(sim.historyOutput.last, isNonZero);
+    });
+
+    test('maxSteps到達後のstep呼び出しは何もしない', () {
+      final sim = Simulator(maxSteps: 5);
+
+      for (int i = 0; i < 5; i++) {
+        sim.step();
+      }
+
+      expect(sim.isHalted, isTrue);
+      final countBefore = sim.stepCount;
+      final historyLengthBefore = sim.historyTarget.length;
+
+      sim.step();
+      sim.step();
+
+      expect(sim.stepCount, countBefore);
+      expect(sim.historyTarget.length, historyLengthBefore);
+    });
+
+    test('reset後はmaxStepsハルトがクリアされ再実行できる', () {
+      final sim = Simulator(maxSteps: 5);
+
+      for (int i = 0; i < 5; i++) {
+        sim.step();
+      }
+      expect(sim.isHalted, isTrue);
+
+      sim.reset();
+
+      expect(sim.isHalted, isFalse);
+      expect(sim.stepCount, 0);
+
+      sim.step();
+      expect(sim.stepCount, 1);
+      expect(sim.isHalted, isFalse);
+    });
+
     test('reset後はhaltフラグがクリアされる', () {
       final sim = Simulator(maxControlInputAbs: 1.0);
 

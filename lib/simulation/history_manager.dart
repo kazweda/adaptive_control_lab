@@ -34,7 +34,7 @@ class HistoryManager {
   List<double> actualB2 = [];
 
   /// コンストラクタ
-  HistoryManager({this.maxLength = 5000});
+  HistoryManager({this.maxLength = 1000});
 
   /// 基本履歴（目標値、出力、制御入力）を追加
   void addStep({

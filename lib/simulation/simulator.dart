@@ -18,6 +18,8 @@ export 'disturbance_manager.dart' show DisturbancePreset;
 class Simulator {
   // 履歴上限（メモリ/パフォーマンス保護用）
   final int maxHistoryLength;
+  // シミュレーション最大ステップ数
+  final int maxSteps;
   // 安全ガード（発散防止の上限）
   final double maxOutputAbs;
   final double maxControlInputAbs;
@@ -48,7 +50,8 @@ class Simulator {
 
   /// コンストラクタ
   Simulator({
-    this.maxHistoryLength = 5000,
+    this.maxHistoryLength = 1000,
+    this.maxSteps = 1000,
     this.maxOutputAbs = 10.0,
     this.maxControlInputAbs = 10.0,
     this.rlsWarmupSteps = 10,
@@ -438,6 +441,11 @@ class Simulator {
           b: rls!.estimatedB,
         );
       }
+    }
+
+    // ステップ数上限に達したら停止
+    if (stepCount >= maxSteps) {
+      _halted = true;
     }
   }
 
