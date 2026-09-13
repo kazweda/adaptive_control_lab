@@ -138,7 +138,10 @@ void main() {
       expect(scrollPos, 0.0);
 
       // チャートを左方向にドラッグして先頭以外を表示する
-      await tester.drag(find.byType(SingleChildScrollView), const Offset(-300, 0));
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(-300, 0),
+      );
       await tester.pumpAndSettle();
 
       expect(scrollPos, greaterThan(0.0));

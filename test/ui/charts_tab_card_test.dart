@@ -59,9 +59,7 @@ void main() {
     expect(find.textContaining('残差 e_rls(k)'), findsOneWidget);
   });
 
-  testWidgets('推定パラメータタブに切り替えると空状態メッセージが表示される', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('推定パラメータタブに切り替えると空状態メッセージが表示される', (WidgetTester tester) async {
     await tester.pumpWidget(buildTestWidget());
 
     await tester.tap(find.text('推定パラメータ'));

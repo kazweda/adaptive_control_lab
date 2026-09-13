@@ -236,7 +236,10 @@ class ParameterTracePlot extends StatelessWidget {
     }
 
     // 凡例は表示範囲に関わらず固定（系列の色分け一覧のため、全データ長で1回だけ計算）
-    final legendSeries = _buildSeries(dataLength, RangeValuesInt(0, dataLength - 1));
+    final legendSeries = _buildSeries(
+      dataLength,
+      RangeValuesInt(0, dataLength - 1),
+    );
 
     final content = Padding(
       padding: const EdgeInsets.all(16.0),
