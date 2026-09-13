@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../simulation/simulator.dart';
 import 'controllers/pid_controller_screen.dart';
 import 'controllers/str_controller_screen.dart';
+import 'plot.dart';
+import 'diagnostics_plot.dart';
 import 'components/chart_window_selector.dart';
-import 'components/charts_tab_card.dart';
 import 'components/simulation_status_panel.dart';
 import 'components/simulation_control_panel.dart';
 import 'components/target_value_panel.dart';
@@ -11,6 +12,7 @@ import 'components/controller_selector_panel.dart';
 import 'components/disturbance_panel.dart';
 import 'components/plant_params_panel.dart';
 import 'components/responsive_card_grid.dart';
+import 'components/responsive_split_row.dart';
 import 'dart:async';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -173,43 +175,75 @@ class _MainScreenState extends State<MainScreen> {
                 },
               ),
               const SizedBox(height: 8),
-              // === チャート（タブ切替：時系列/残差/推定パラメータ） ===
-              ChartsTabCard(
-                historyTarget: simulator.historyTarget,
-                historyOutput: simulator.historyOutput,
-                historyControl: simulator.historyControl,
-                historyResidual: simulator.historyResidual,
-                // 実行中は安全のため All 選択時でも 200 に制限
-                maxDataPoints: _effectiveChartWindow(),
-                isRunning: isRunning,
-                scrollPosition: _scrollPosition,
-                onScrollChanged: (value) {
-                  setState(() {
-                    _scrollPosition = value;
-                  });
-                },
-                isSecondOrderPlant: simulator.isSecondOrderPlant,
-                estA: simulator.historyEstimatedA,
-                estB: simulator.historyEstimatedB,
-                estA1: simulator.historyEstimatedA1,
-                estA2: simulator.historyEstimatedA2,
-                estB1: simulator.historyEstimatedB1,
-                estB2: simulator.historyEstimatedB2,
-                actualA: simulator.historyActualA,
-                actualB: simulator.historyActualB,
-                actualA1: simulator.historyActualA1,
-                actualA2: simulator.historyActualA2,
-                actualB1: simulator.historyActualB1,
-                actualB2: simulator.historyActualB2,
+
+              // === 時系列チャート（2/3幅）＋ 制御ボタン（1/3幅） ===
+              ResponsiveSplitRow(
+                flex: const [2, 1],
+                children: [
+                  TimeSeriesPlot(
+                    historyTarget: simulator.historyTarget,
+                    historyOutput: simulator.historyOutput,
+                    historyControl: simulator.historyControl,
+                    // 実行中は安全のため All 選択時でも 200 に制限
+                    maxDataPoints: _effectiveChartWindow(),
+                    isRunning: isRunning,
+                    scrollPosition: _scrollPosition,
+                    onScrollChanged: (value) {
+                      setState(() {
+                        _scrollPosition = value;
+                      });
+                    },
+                  ),
+                  SimulationControlPanel(
+                    isRunning: isRunning,
+                    onStart: _startSimulation,
+                    onStop: _stopSimulation,
+                    onReset: _resetSimulation,
+                    direction: Axis.vertical,
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
-              // === 制御ボタン ===
-              SimulationControlPanel(
-                isRunning: isRunning,
-                onStart: _startSimulation,
-                onStop: _stopSimulation,
-                onReset: _resetSimulation,
+              // === 残差チャート（1/2幅）＋ 推定パラメータチャート（1/2幅） ===
+              ResponsiveSplitRow(
+                flex: const [1, 1],
+                children: [
+                  ResidualPlot(
+                    residual: simulator.historyResidual,
+                    maxDataPoints: _effectiveChartWindow(),
+                    isRunning: isRunning,
+                    scrollPosition: _scrollPosition,
+                    onScrollChanged: (value) {
+                      setState(() {
+                        _scrollPosition = value;
+                      });
+                    },
+                  ),
+                  ParameterTracePlot(
+                    isSecondOrder: simulator.isSecondOrderPlant,
+                    maxDataPoints: _effectiveChartWindow(),
+                    isRunning: isRunning,
+                    scrollPosition: _scrollPosition,
+                    onScrollChanged: (value) {
+                      setState(() {
+                        _scrollPosition = value;
+                      });
+                    },
+                    estA: simulator.historyEstimatedA,
+                    estB: simulator.historyEstimatedB,
+                    estA1: simulator.historyEstimatedA1,
+                    estA2: simulator.historyEstimatedA2,
+                    estB1: simulator.historyEstimatedB1,
+                    estB2: simulator.historyEstimatedB2,
+                    actualA: simulator.historyActualA,
+                    actualB: simulator.historyActualB,
+                    actualA1: simulator.historyActualA1,
+                    actualA2: simulator.historyActualA2,
+                    actualB1: simulator.historyActualB1,
+                    actualB2: simulator.historyActualB2,
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
