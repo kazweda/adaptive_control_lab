@@ -10,6 +10,7 @@ import 'components/target_value_panel.dart';
 import 'components/controller_selector_panel.dart';
 import 'components/disturbance_panel.dart';
 import 'components/plant_params_panel.dart';
+import 'components/responsive_card_grid.dart';
 import 'dart:async';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -203,10 +204,6 @@ class _MainScreenState extends State<MainScreen> {
               ),
               const SizedBox(height: 16),
 
-              // === ステータス表示 ===
-              SimulationStatusPanel(simulator: simulator, isRunning: isRunning),
-              const SizedBox(height: 16),
-
               // === 制御ボタン ===
               SimulationControlPanel(
                 isRunning: isRunning,
@@ -216,80 +213,92 @@ class _MainScreenState extends State<MainScreen> {
               ),
               const SizedBox(height: 16),
 
-              // === 目標値調整 ===
-              TargetValuePanel(
-                simulator: simulator,
-                onChanged: (value) {
-                  setState(() {
-                    simulator.targetValue = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
+              // === 設定カード群（画面幅に応じて1〜3カラムのレスポンシブ配置） ===
+              ResponsiveCardGrid(
+                children: [
+                  // ステータス表示
+                  SimulationStatusPanel(
+                    simulator: simulator,
+                    isRunning: isRunning,
+                  ),
 
-              // === コントローラー選択タブ ===
-              ControllerSelectorPanel(
-                selectedControllerIndex: _selectedControllerIndex,
-                onChanged: (index) {
-                  setState(() {
-                    _selectedControllerIndex = index;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
+                  // 目標値調整
+                  TargetValuePanel(
+                    simulator: simulator,
+                    onChanged: (value) {
+                      setState(() {
+                        simulator.targetValue = value;
+                      });
+                    },
+                  ),
 
-              // === コントローラー設定画面 ===
-              _buildControllerScreen(),
-              const SizedBox(height: 16),
+                  // コントローラー選択タブ + 設定画面
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ControllerSelectorPanel(
+                        selectedControllerIndex: _selectedControllerIndex,
+                        onChanged: (index) {
+                          setState(() {
+                            _selectedControllerIndex = index;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildControllerScreen(),
+                    ],
+                  ),
 
-              // === プラントパラメータ調整 ===
-              PlantParamsPanel(
-                simulator: simulator,
-                onPlantOrderChanged: (useSecondOrder) {
-                  setState(() {
-                    simulator.setPlantOrder(useSecondOrder: useSecondOrder);
-                  });
-                },
-                onParamAChanged: (value) {
-                  setState(() {
-                    simulator.plantParamA = value;
-                  });
-                },
-                onParamBChanged: (value) {
-                  setState(() {
-                    simulator.plantParamB = value;
-                  });
-                },
-                onParamA1Changed: (value) {
-                  setState(() {
-                    simulator.plantParamA1 = value;
-                  });
-                },
-                onParamA2Changed: (value) {
-                  setState(() {
-                    simulator.plantParamA2 = value;
-                  });
-                },
-                onParamB1Changed: (value) {
-                  setState(() {
-                    simulator.plantParamB1 = value;
-                  });
-                },
-                onParamB2Changed: (value) {
-                  setState(() {
-                    simulator.plantParamB2 = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              // === 外乱設定 ===
-              DisturbancePanel(
-                simulator: simulator,
-                onPresetApplied: (presetName) {
-                  setState(() {
-                    simulator.applyDisturbancePreset(presetName);
-                  });
-                },
+                  // プラントパラメータ調整
+                  PlantParamsPanel(
+                    simulator: simulator,
+                    onPlantOrderChanged: (useSecondOrder) {
+                      setState(() {
+                        simulator.setPlantOrder(useSecondOrder: useSecondOrder);
+                      });
+                    },
+                    onParamAChanged: (value) {
+                      setState(() {
+                        simulator.plantParamA = value;
+                      });
+                    },
+                    onParamBChanged: (value) {
+                      setState(() {
+                        simulator.plantParamB = value;
+                      });
+                    },
+                    onParamA1Changed: (value) {
+                      setState(() {
+                        simulator.plantParamA1 = value;
+                      });
+                    },
+                    onParamA2Changed: (value) {
+                      setState(() {
+                        simulator.plantParamA2 = value;
+                      });
+                    },
+                    onParamB1Changed: (value) {
+                      setState(() {
+                        simulator.plantParamB1 = value;
+                      });
+                    },
+                    onParamB2Changed: (value) {
+                      setState(() {
+                        simulator.plantParamB2 = value;
+                      });
+                    },
+                  ),
+
+                  // 外乱設定
+                  DisturbancePanel(
+                    simulator: simulator,
+                    onPresetApplied: (presetName) {
+                      setState(() {
+                        simulator.applyDisturbancePreset(presetName);
+                      });
+                    },
+                  ),
+                ],
               ),
             ],
           ),
