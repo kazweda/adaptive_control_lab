@@ -194,12 +194,21 @@ class _MainScreenState extends State<MainScreen> {
                       });
                     },
                   ),
-                  SimulationControlPanel(
-                    isRunning: isRunning,
-                    onStart: _startSimulation,
-                    onStop: _stopSimulation,
-                    onReset: _resetSimulation,
-                    direction: Axis.vertical,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SimulationControlPanel(
+                        isRunning: isRunning,
+                        onStart: _startSimulation,
+                        onStop: _stopSimulation,
+                        onReset: _resetSimulation,
+                      ),
+                      const SizedBox(height: 16),
+                      SimulationStatusPanel(
+                        simulator: simulator,
+                        isRunning: isRunning,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -250,12 +259,6 @@ class _MainScreenState extends State<MainScreen> {
               // === 設定カード群（画面幅に応じて1〜3カラムのレスポンシブ配置） ===
               ResponsiveCardGrid(
                 children: [
-                  // ステータス表示
-                  SimulationStatusPanel(
-                    simulator: simulator,
-                    isRunning: isRunning,
-                  ),
-
                   // 目標値調整
                   TargetValuePanel(
                     simulator: simulator,
