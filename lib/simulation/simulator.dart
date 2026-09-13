@@ -53,7 +53,7 @@ class Simulator {
   /// コンストラクタ
   Simulator({
     this.maxHistoryLength = 1000,
-    this.maxSteps = 1000,
+    this.maxSteps = 500,
     this.maxOutputAbs = 10.0,
     this.maxControlInputAbs = 10.0,
     this.rlsWarmupSteps = 10,
