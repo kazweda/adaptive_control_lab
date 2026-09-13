@@ -1,6 +1,23 @@
 import '../control/rls.dart';
 import '../control/str.dart';
 
+/// STR所望極のプリセット定義
+class STRPreset {
+  final String name;
+  final String displayName;
+  final String description;
+  final double pole1;
+  final double pole2;
+
+  const STRPreset({
+    required this.name,
+    required this.displayName,
+    required this.description,
+    required this.pole1,
+    required this.pole2,
+  });
+}
+
 /// STR/RLS のライフサイクルと設定を集約するマネージャー
 ///
 /// Simulator から STR 関連の初期化・切替・パラメータ設定の責務を分離する。
@@ -25,6 +42,9 @@ class StrManager {
   double strTargetPole1;
   double strTargetPole2;
   STR? str;
+
+  /// 現在適用中の極プリセット名（手動で極を変更すると'カスタム'になる）
+  String currentPresetName = '標準';
 
   // 初期共分散スケール（Issue #37 対策値）
   final double initialCovarianceScale;
@@ -61,6 +81,46 @@ class StrManager {
     strTargetPole1 = p1;
     strTargetPole2 = p2;
     str?.setTargetPoles(p1, p2);
+    currentPresetName = 'カスタム';
+  }
+
+  /// 極プリセット一覧を取得
+  static List<STRPreset> getAvailablePresets() {
+    return const [
+      STRPreset(
+        name: 'stable',
+        displayName: '安定重視',
+        description: '収束はゆっくりだが安定性重視',
+        pole1: 0.7,
+        pole2: 0.5,
+      ),
+      STRPreset(
+        name: 'standard',
+        displayName: '標準',
+        description: 'バランス重視のデフォルト',
+        pole1: 0.5,
+        pole2: 0.3,
+      ),
+      STRPreset(
+        name: 'fast',
+        displayName: '速応答',
+        description: '速く収束、外乱に敏感になる場合あり',
+        pole1: 0.25,
+        pole2: 0.15,
+      ),
+    ];
+  }
+
+  /// 極プリセットを適用
+  void applyPreset(String presetName) {
+    final preset = getAvailablePresets().firstWhere(
+      (p) => p.name == presetName,
+      orElse: () => getAvailablePresets()[1],
+    );
+    strTargetPole1 = preset.pole1;
+    strTargetPole2 = preset.pole2;
+    str?.setTargetPoles(preset.pole1, preset.pole2);
+    currentPresetName = preset.displayName;
   }
 
   void setStrTargetPolesButterworth(double bandwidth) {
@@ -69,6 +129,7 @@ class StrManager {
       str!.setTargetPolesButterworth(bandwidth);
       strTargetPole1 = str!.targetPole1;
       strTargetPole2 = str!.targetPole2;
+      currentPresetName = 'カスタム';
       return;
     }
 
@@ -90,6 +151,7 @@ class StrManager {
     tempStr.setTargetPolesButterworth(bandwidth);
     strTargetPole1 = tempStr.targetPole1;
     strTargetPole2 = tempStr.targetPole2;
+    currentPresetName = 'カスタム';
   }
 
   void resetControllers() {

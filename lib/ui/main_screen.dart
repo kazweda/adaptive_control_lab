@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import '../simulation/simulator.dart';
-import 'plot.dart';
 import 'controllers/pid_controller_screen.dart';
 import 'controllers/str_controller_screen.dart';
 import 'components/chart_window_selector.dart';
+import 'components/charts_tab_card.dart';
 import 'components/simulation_status_panel.dart';
 import 'components/simulation_control_panel.dart';
 import 'components/target_value_panel.dart';
 import 'components/controller_selector_panel.dart';
 import 'components/disturbance_panel.dart';
 import 'components/plant_params_panel.dart';
-import 'diagnostics_plot.dart';
 import 'dart:async';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -173,11 +172,12 @@ class _MainScreenState extends State<MainScreen> {
                 },
               ),
               const SizedBox(height: 8),
-              // === 時系列グラフ ===
-              TimeSeriesPlot(
+              // === チャート（タブ切替：時系列/残差/推定パラメータ） ===
+              ChartsTabCard(
                 historyTarget: simulator.historyTarget,
                 historyOutput: simulator.historyOutput,
                 historyControl: simulator.historyControl,
+                historyResidual: simulator.historyResidual,
                 // 実行中は安全のため All 選択時でも 200 に制限
                 maxDataPoints: _effectiveChartWindow(),
                 isRunning: isRunning,
@@ -187,24 +187,7 @@ class _MainScreenState extends State<MainScreen> {
                     _scrollPosition = value;
                   });
                 },
-              ),
-              const SizedBox(height: 24),
-
-              // === 残差プロット ===
-              ResidualPlot(
-                residual: simulator.historyResidual,
-                maxDataPoints: _effectiveChartWindow(),
-                isRunning: isRunning,
-                scrollPosition: _scrollPosition,
-              ),
-              const SizedBox(height: 16),
-
-              // === 推定パラメータトレース ===
-              ParameterTracePlot(
-                isSecondOrder: simulator.isSecondOrderPlant,
-                maxDataPoints: _effectiveChartWindow(),
-                isRunning: isRunning,
-                scrollPosition: _scrollPosition,
+                isSecondOrderPlant: simulator.isSecondOrderPlant,
                 estA: simulator.historyEstimatedA,
                 estB: simulator.historyEstimatedB,
                 estA1: simulator.historyEstimatedA1,
@@ -218,11 +201,11 @@ class _MainScreenState extends State<MainScreen> {
                 actualB1: simulator.historyActualB1,
                 actualB2: simulator.historyActualB2,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // === ステータス表示 ===
               SimulationStatusPanel(simulator: simulator, isRunning: isRunning),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // === 制御ボタン ===
               SimulationControlPanel(
@@ -231,7 +214,7 @@ class _MainScreenState extends State<MainScreen> {
                 onStop: _stopSimulation,
                 onReset: _resetSimulation,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // === 目標値調整 ===
               TargetValuePanel(
@@ -242,7 +225,7 @@ class _MainScreenState extends State<MainScreen> {
                   });
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // === コントローラー選択タブ ===
               ControllerSelectorPanel(
@@ -257,7 +240,7 @@ class _MainScreenState extends State<MainScreen> {
 
               // === コントローラー設定画面 ===
               _buildControllerScreen(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // === プラントパラメータ調整 ===
               PlantParamsPanel(
@@ -298,7 +281,7 @@ class _MainScreenState extends State<MainScreen> {
                   });
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               // === 外乱設定 ===
               DisturbancePanel(
                 simulator: simulator,

@@ -7,6 +7,8 @@ class ResidualPlot extends StatelessWidget {
   final int maxDataPoints;
   final bool isRunning;
   final double scrollPosition;
+  // 外側にCardを付けるか（タブ内などで既にCardに包まれている場合はfalse）
+  final bool showCard;
 
   const ResidualPlot({
     super.key,
@@ -14,6 +16,7 @@ class ResidualPlot extends StatelessWidget {
     required this.maxDataPoints,
     required this.isRunning,
     this.scrollPosition = 0.0,
+    this.showCard = true,
   });
 
   @override
@@ -22,6 +25,7 @@ class ResidualPlot extends StatelessWidget {
       return _buildEmptyCard(
         title: '残差 e_rls(k)',
         message: 'STR/RLS有効時に残差が表示されます',
+        showCard: showCard,
       );
     }
 
@@ -31,14 +35,13 @@ class ResidualPlot extends StatelessWidget {
       spots.add(FlSpot(i.toDouble(), residual[i]));
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '残差 e_rls(k) = y(k) - ŷ(k)',
+    final content = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '残差 e_rls(k) = y(k) - ŷ(k)',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -117,8 +120,8 @@ class ResidualPlot extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
+    return showCard ? Card(child: content) : content;
   }
 
   RangeValuesInt _windowRange(int length, int window, bool running) {
@@ -150,29 +153,32 @@ class ResidualPlot extends StatelessWidget {
     return values.reduce((a, b) => a > b ? a : b);
   }
 
-  Widget _buildEmptyCard({required String title, required String message}) {
-    return Card(
-      child: Container(
-        height: 160,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+  Widget _buildEmptyCard({
+    required String title,
+    required String message,
+    bool showCard = true,
+  }) {
+    final content = Container(
+      height: 160,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
+    return showCard ? Card(child: content) : content;
   }
 }
 
@@ -199,6 +205,9 @@ class ParameterTracePlot extends StatelessWidget {
   final List<double> actualB1;
   final List<double> actualB2;
 
+  // 外側にCardを付けるか（タブ内などで既にCardに包まれている場合はfalse）
+  final bool showCard;
+
   const ParameterTracePlot({
     super.key,
     required this.isSecondOrder,
@@ -217,6 +226,7 @@ class ParameterTracePlot extends StatelessWidget {
     required this.actualA2,
     required this.actualB1,
     required this.actualB2,
+    this.showCard = true,
   });
 
   @override
@@ -226,84 +236,84 @@ class ParameterTracePlot extends StatelessWidget {
       return _buildEmptyCard(
         title: '推定パラメータトレース',
         message: 'STR/RLS有効時に推定パラメータが表示されます',
+        showCard: showCard,
       );
     }
 
     final range = _windowRange(dataLength, maxDataPoints, isRunning);
     final series = _buildSeries(range);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '推定パラメータの時系列',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Wrap(spacing: 12, runSpacing: 6, children: series.legend),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: isSecondOrder ? 220 : 180,
-              child: LineChart(
-                LineChartData(
-                  minX: range.start.toDouble(),
-                  maxX: range.end.toDouble(),
-                  minY: series.minY - 0.1,
-                  maxY: series.maxY + 0.1,
-                  gridData: FlGridData(show: true, horizontalInterval: 0.2),
-                  titlesData: FlTitlesData(
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    leftTitles: AxisTitles(
-                      axisNameWidget: const Text('係数'),
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 42,
-                        getTitlesWidget: (v, _) => Text(
-                          v.toStringAsFixed(2),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      axisNameWidget: const Text('ステップ'),
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 30,
-                        interval: 50,
-                        getTitlesWidget: (v, _) => Text(
-                          v.toInt().toString(),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey,
-                          ),
+    final content = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '推定パラメータの時系列',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Wrap(spacing: 12, runSpacing: 6, children: series.legend),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: isSecondOrder ? 220 : 180,
+            child: LineChart(
+              LineChartData(
+                minX: range.start.toDouble(),
+                maxX: range.end.toDouble(),
+                minY: series.minY - 0.1,
+                maxY: series.maxY + 0.1,
+                gridData: FlGridData(show: true, horizontalInterval: 0.2),
+                titlesData: FlTitlesData(
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    axisNameWidget: const Text('係数'),
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 42,
+                      getTitlesWidget: (v, _) => Text(
+                        v.toStringAsFixed(2),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
                         ),
                       ),
                     ),
                   ),
-                  borderData: FlBorderData(
-                    show: true,
-                    border: Border.all(color: Colors.grey[400]!),
+                  bottomTitles: AxisTitles(
+                    axisNameWidget: const Text('ステップ'),
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      interval: 50,
+                      getTitlesWidget: (v, _) => Text(
+                        v.toInt().toString(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
                   ),
-                  lineBarsData: series.bars,
                 ),
-                duration: const Duration(milliseconds: 0),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: Colors.grey[400]!),
+                ),
+                lineBarsData: series.bars,
               ),
+              duration: const Duration(milliseconds: 0),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+    return showCard ? Card(child: content) : content;
   }
 
   int _effectiveLength() {
@@ -444,29 +454,32 @@ class ParameterTracePlot extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyCard({required String title, required String message}) {
-    return Card(
-      child: Container(
-        height: 180,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+  Widget _buildEmptyCard({
+    required String title,
+    required String message,
+    bool showCard = true,
+  }) {
+    final content = Container(
+      height: 180,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
+    return showCard ? Card(child: content) : content;
   }
 }
 

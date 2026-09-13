@@ -17,6 +17,8 @@ class TimeSeriesPlot extends StatefulWidget {
   final double scrollPosition;
   // スクロール位置変更コールバック
   final ValueChanged<double>? onScrollChanged;
+  // 外側にCardを付けるか（タブ内などで既にCardに包まれている場合はfalse）
+  final bool showCard;
 
   const TimeSeriesPlot({
     super.key,
@@ -27,6 +29,7 @@ class TimeSeriesPlot extends StatefulWidget {
     this.isRunning = false,
     this.scrollPosition = 0.0,
     this.onScrollChanged,
+    this.showCard = true,
   });
 
   @override
@@ -46,24 +49,23 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
         widget.historyTarget.length != widget.historyControl.length;
 
     if (hasEmptyData || hasInconsistentLength) {
-      return Card(
-        child: Container(
-          height: 300,
-          alignment: Alignment.center,
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.show_chart, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                'スタートボタンを押すと\nグラフが表示されます',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
+      final emptyState = Container(
+        height: 300,
+        alignment: Alignment.center,
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.show_chart, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'スタートボタンを押すと\nグラフが表示されます',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
         ),
       );
+      return widget.showCard ? Card(child: emptyState) : emptyState;
     }
 
     // スクロール位置を制限（停止時）
@@ -72,34 +74,33 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
         ? 0
         : (dataLength - widget.maxDataPoints);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // グラフタイトルと凡例
-            _buildLegend(),
-            const SizedBox(height: 16),
+    final content = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // グラフタイトルと凡例
+          _buildLegend(),
+          const SizedBox(height: 16),
 
-            // グラフ本体
-            SizedBox(
-              height: 300,
-              child: LineChart(
-                _buildLineChartData(),
-                duration: const Duration(milliseconds: 0),
-              ),
+          // グラフ本体
+          SizedBox(
+            height: 300,
+            child: LineChart(
+              _buildLineChartData(),
+              duration: const Duration(milliseconds: 0),
             ),
+          ),
 
-            // 停止時のみスクロールバーを表示
-            if (!widget.isRunning && maxScrollPosition > 0) ...[
-              const SizedBox(height: 16),
-              _buildScrollBar(maxScrollPosition),
-            ],
+          // 停止時のみスクロールバーを表示
+          if (!widget.isRunning && maxScrollPosition > 0) ...[
+            const SizedBox(height: 16),
+            _buildScrollBar(maxScrollPosition),
           ],
-        ),
+        ],
       ),
     );
+    return widget.showCard ? Card(child: content) : content;
   }
 
   /// 凡例を構築
