@@ -327,5 +327,54 @@ void main() {
         expect(mgr.str!.rls.lambda, 0.95);
       });
     });
+
+    group('極プリセット', () {
+      test('getAvailablePresets は3件のプリセットを返す', () {
+        final presets = StrManager.getAvailablePresets();
+        expect(presets.length, 3);
+        expect(presets.map((p) => p.name), ['stable', 'standard', 'fast']);
+      });
+
+      test('初期状態のプリセット名は標準', () {
+        final mgr = StrManager(useSecondOrderPlant: false);
+        expect(mgr.currentPresetName, '標準');
+      });
+
+      test('applyPreset: 極が設定されプリセット名が更新される', () {
+        final mgr = StrManager(useSecondOrderPlant: false);
+        mgr.applyPreset('fast');
+
+        expect(mgr.strTargetPole1, 0.25);
+        expect(mgr.strTargetPole2, 0.15);
+        expect(mgr.currentPresetName, '速応答');
+      });
+
+      test('STR有効時にapplyPresetするとstrインスタンスにも反映される', () {
+        final mgr = StrManager(useSecondOrderPlant: false);
+        mgr.setStrEnabled(true);
+        mgr.applyPreset('stable');
+
+        expect(mgr.str!.targetPole1, 0.7);
+        expect(mgr.str!.targetPole2, 0.5);
+      });
+
+      test('存在しないプリセット名は標準にフォールバックする', () {
+        final mgr = StrManager(useSecondOrderPlant: false);
+        mgr.applyPreset('unknown');
+
+        expect(mgr.currentPresetName, '標準');
+        expect(mgr.strTargetPole1, 0.5);
+        expect(mgr.strTargetPole2, 0.3);
+      });
+
+      test('プリセット適用後に手動でsetStrTargetPolesするとカスタムになる', () {
+        final mgr = StrManager(useSecondOrderPlant: false);
+        mgr.applyPreset('standard');
+        expect(mgr.currentPresetName, '標準');
+
+        mgr.setStrTargetPoles(0.6, 0.4);
+        expect(mgr.currentPresetName, 'カスタム');
+      });
+    });
   });
 }

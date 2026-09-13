@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'components/horizontal_scroll_chart.dart';
 
 /// 時系列グラフウィジェット
 ///
@@ -17,6 +18,8 @@ class TimeSeriesPlot extends StatefulWidget {
   final double scrollPosition;
   // スクロール位置変更コールバック
   final ValueChanged<double>? onScrollChanged;
+  // 外側にCardを付けるか（タブ内などで既にCardに包まれている場合はfalse）
+  final bool showCard;
 
   const TimeSeriesPlot({
     super.key,
@@ -27,6 +30,7 @@ class TimeSeriesPlot extends StatefulWidget {
     this.isRunning = false,
     this.scrollPosition = 0.0,
     this.onScrollChanged,
+    this.showCard = true,
   });
 
   @override
@@ -46,60 +50,53 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
         widget.historyTarget.length != widget.historyControl.length;
 
     if (hasEmptyData || hasInconsistentLength) {
-      return Card(
-        child: Container(
-          height: 300,
-          alignment: Alignment.center,
-          child: const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.show_chart, size: 64, color: Colors.grey),
-              SizedBox(height: 16),
-              Text(
-                'スタートボタンを押すと\nグラフが表示されます',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // スクロール位置を制限（停止時）
-    final int dataLength = widget.historyTarget.length;
-    final int maxScrollPosition = (dataLength - widget.maxDataPoints) < 0
-        ? 0
-        : (dataLength - widget.maxDataPoints);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      final emptyState = Container(
+        height: 300,
+        alignment: Alignment.center,
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // グラフタイトルと凡例
-            _buildLegend(),
-            const SizedBox(height: 16),
-
-            // グラフ本体
-            SizedBox(
-              height: 300,
-              child: LineChart(
-                _buildLineChartData(),
-                duration: const Duration(milliseconds: 0),
-              ),
+            Icon(Icons.show_chart, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'スタートボタンを押すと\nグラフが表示されます',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
-
-            // 停止時のみスクロールバーを表示
-            if (!widget.isRunning && maxScrollPosition > 0) ...[
-              const SizedBox(height: 16),
-              _buildScrollBar(maxScrollPosition),
-            ],
           ],
         ),
+      );
+      return widget.showCard ? Card(child: emptyState) : emptyState;
+    }
+
+    final int dataLength = widget.historyTarget.length;
+
+    final content = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // グラフタイトルと凡例
+          _buildLegend(),
+          const SizedBox(height: 16),
+
+          // グラフ本体（横方向にネイティブスクロール可能）
+          HorizontalScrollChart(
+            totalSteps: dataLength,
+            windowSteps: widget.maxDataPoints,
+            isRunning: widget.isRunning,
+            scrollStepPosition: widget.scrollPosition,
+            onScrollStepChanged: widget.onScrollChanged,
+            height: 300,
+            chartBuilder: (visibleStart, visibleEnd) => LineChart(
+              _buildLineChartData(visibleStart, visibleEnd),
+              duration: const Duration(milliseconds: 0),
+            ),
+          ),
+        ],
       ),
     );
+    return widget.showCard ? Card(child: content) : content;
   }
 
   /// 凡例を構築
@@ -127,63 +124,14 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
     );
   }
 
-  /// スクロールバーを構築
-  Widget _buildScrollBar(int maxScrollPosition) {
-    final scrollPos = widget.scrollPosition.clamp(
-      0.0,
-      maxScrollPosition.toDouble(),
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'スクロール位置: ${scrollPos.toInt()} / $maxScrollPosition',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        Slider(
-          min: 0,
-          max: maxScrollPosition.toDouble(),
-          value: scrollPos,
-          onChanged: widget.onScrollChanged,
-          divisions: maxScrollPosition > 0 ? maxScrollPosition : null,
-          label: scrollPos.toInt().toString(),
-        ),
-      ],
-    );
-  }
-
   /// グラフデータを構築
-  LineChartData _buildLineChartData() {
+  ///
+  /// [visibleStart]/[visibleEnd] は現在スクロールで見えている範囲（Y軸スケール計算用）。
+  /// 折れ線自体は常に全データ（0〜dataLength-1）を描画し、横スクロールで表示範囲を移動する。
+  LineChartData _buildLineChartData(int visibleStart, int visibleEnd) {
     final dataLength = widget.historyTarget.length;
-
-    // 実行中：最新 maxDataPoints 点のみ表示
-    // 停止中：スクロール位置から maxDataPoints 点を表示
-    final int startIndex;
-    final int endIndex;
-
-    if (widget.isRunning) {
-      // 実行中：最新 maxDataPoints 点のみ
-      final windowLen = (widget.maxDataPoints >= dataLength)
-          ? dataLength
-          : widget.maxDataPoints;
-      startIndex = (dataLength == 0) ? 0 : (dataLength - windowLen);
-      endIndex = (dataLength == 0) ? 0 : (dataLength - 1);
-    } else {
-      // 停止中：スクロール位置から maxDataPoints 点を表示
-      final scrollPos = widget.scrollPosition.clamp(
-        0.0,
-        (dataLength - widget.maxDataPoints).toDouble().clamp(
-          0.0,
-          double.infinity,
-        ),
-      );
-      startIndex = scrollPos.toInt();
-      endIndex = (startIndex + widget.maxDataPoints - 1).clamp(
-        0,
-        dataLength - 1,
-      );
-    }
+    final int startIndex = 0;
+    final int endIndex = dataLength > 0 ? dataLength - 1 : 0;
     return LineChartData(
       gridData: FlGridData(
         show: true,
@@ -244,8 +192,8 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
       ),
       minX: startIndex.toDouble(),
       maxX: dataLength > 0 ? endIndex.toDouble() : 0,
-      minY: _calculateMinY(startIndex, endIndex),
-      maxY: _calculateMaxY(startIndex, endIndex),
+      minY: _calculateMinY(visibleStart, visibleEnd),
+      maxY: _calculateMaxY(visibleStart, visibleEnd),
       lineBarsData: [
         _buildLineChartBarData(
           widget.historyTarget,

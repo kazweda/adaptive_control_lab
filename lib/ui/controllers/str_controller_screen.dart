@@ -71,7 +71,7 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
     );
   }
 
-  /// 所望の極スライダーセクション
+  /// 所望の極セクション（プリセット + 詳細設定）
   Widget _buildTargetPolesSection() {
     return Card(
       child: Padding(
@@ -84,71 +84,155 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-
-            // 1次・2次共通: targetPole1
-            _buildPoleSlider(
-              label: '主極（極1）',
-              value: widget.simulator.strTargetPole1,
-              onChanged: (value) {
-                setState(() {
-                  widget.simulator.setStrTargetPoles(
-                    value,
-                    widget.simulator.strTargetPole2,
-                  );
-                  widget.onUpdate();
-                });
-              },
-              description: '小さいほど速く減衰（0 < p < 1）',
-            ),
-            const SizedBox(height: 16),
-
-            // 2次系のみ表示
-            if (widget.simulator.isSecondOrderPlant)
-              Column(
+            _buildPresetSelector(),
+            Theme(
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(top: 8),
+                title: const Text(
+                  '詳細設定（極を個別に調整）',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
                 children: [
+                  // 1次・2次共通: targetPole1
                   _buildPoleSlider(
-                    label: '補助極（極2）',
-                    value: widget.simulator.strTargetPole2,
+                    label: '主極（極1）',
+                    value: widget.simulator.strTargetPole1,
                     onChanged: (value) {
-                      setState(() {
-                        widget.simulator.setStrTargetPoles(
-                          widget.simulator.strTargetPole1,
-                          value,
-                        );
-                        widget.onUpdate();
-                      });
+                      widget.simulator.setStrTargetPoles(
+                        value,
+                        widget.simulator.strTargetPole2,
+                      );
+                      widget.onUpdate();
                     },
-                    description: '2次プラント用の補助極',
+                    description: '小さいほど速く減衰（0 < p < 1）',
                   ),
                   const SizedBox(height: 16),
+
+                  // 2次系のみ表示
+                  if (widget.simulator.isSecondOrderPlant)
+                    Column(
+                      children: [
+                        _buildPoleSlider(
+                          label: '補助極（極2）',
+                          value: widget.simulator.strTargetPole2,
+                          onChanged: (value) {
+                            widget.simulator.setStrTargetPoles(
+                              widget.simulator.strTargetPole1,
+                              value,
+                            );
+                            widget.onUpdate();
+                          },
+                          description: '2次プラント用の補助極',
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+
+                  // Butterworth配置ボタン（2次系のみ）
+                  if (widget.simulator.isSecondOrderPlant)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          widget.simulator.str?.setTargetPolesButterworth(0.3);
+                          // STR オブジェクトの極を Simulator のプロパティに同期
+                          if (widget.simulator.str != null) {
+                            widget.simulator.setStrTargetPoles(
+                              widget.simulator.str!.targetPole1,
+                              widget.simulator.str!.targetPole2,
+                            );
+                          }
+                          widget.onUpdate();
+                        });
+                      },
+                      icon: const Icon(Icons.tune),
+                      label: const Text('Butterworth配置（推奨）'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[300],
+                      ),
+                    ),
                 ],
               ),
-
-            // Butterworth配置ボタン（2次系のみ）
-            if (widget.simulator.isSecondOrderPlant)
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    widget.simulator.str?.setTargetPolesButterworth(0.3);
-                    // STR オブジェクトの極を Simulator のプロパティに同期
-                    if (widget.simulator.str != null) {
-                      widget.simulator.setStrTargetPoles(
-                        widget.simulator.str!.targetPole1,
-                        widget.simulator.str!.targetPole2,
-                      );
-                    }
-                    widget.onUpdate();
-                  });
-                },
-                icon: const Icon(Icons.tune),
-                label: const Text('Butterworth配置（推奨）'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[300],
-                ),
-              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  /// プリセット選択UI
+  Widget _buildPresetSelector() {
+    final presets = Simulator.getAvailableStrPresets();
+    final currentName = widget.simulator.currentStrPresetName;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'プリセット',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                currentName,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: presets.map((preset) {
+            final isActive = currentName == preset.displayName;
+            return ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+                foregroundColor: isActive ? Colors.white : Colors.black,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  widget.simulator.applyStrPreset(preset.name);
+                  widget.onUpdate();
+                });
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    preset.displayName,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  Text(
+                    preset.description,
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 4),
+      ],
     );
   }
 
@@ -186,7 +270,11 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
           min: 0.01,
           max: 0.99,
           divisions: 98,
-          onChanged: onChanged,
+          onChanged: (v) {
+            setState(() {
+              onChanged(v);
+            });
+          },
         ),
       ],
     );

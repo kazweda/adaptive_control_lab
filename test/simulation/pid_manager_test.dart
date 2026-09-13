@@ -105,4 +105,52 @@ void main() {
       expect(controls.first, greaterThan(controls.last));
     });
   });
+
+  group('PIDManager プリセット', () {
+    late PIDManager manager;
+
+    setUp(() {
+      manager = PIDManager(PIDController(kp: 0.5, ki: 0.1, kd: 0.05));
+    });
+
+    test('getAvailablePresets は3件のプリセットを返す', () {
+      final presets = PIDManager.getAvailablePresets();
+      expect(presets.length, 3);
+      expect(presets.map((p) => p.name), ['gentle', 'standard', 'aggressive']);
+    });
+
+    test('初期状態のプリセット名は標準', () {
+      expect(manager.currentPresetName, '標準');
+    });
+
+    test('applyPreset(1次): 対応するゲインが設定される', () {
+      manager.applyPreset('aggressive', isSecondOrder: false);
+      expect(manager.kp, 0.6);
+      expect(manager.ki, 0.2);
+      expect(manager.kd, 0.15);
+      expect(manager.currentPresetName, 'きびきび');
+    });
+
+    test('applyPreset(2次): 1次より抑えめのゲインが設定される', () {
+      manager.applyPreset('aggressive', isSecondOrder: true);
+      expect(manager.kp, 0.2);
+      expect(manager.ki, 0.04);
+      expect(manager.kd, 0.08);
+      expect(manager.currentPresetName, 'きびきび');
+    });
+
+    test('存在しないプリセット名は標準にフォールバックする', () {
+      manager.applyPreset('unknown', isSecondOrder: false);
+      expect(manager.currentPresetName, '標準');
+      expect(manager.kp, 0.3);
+    });
+
+    test('プリセット適用後に手動でゲインを変更するとカスタムになる', () {
+      manager.applyPreset('standard', isSecondOrder: false);
+      expect(manager.currentPresetName, '標準');
+
+      manager.kp = 0.9;
+      expect(manager.currentPresetName, 'カスタム');
+    });
+  });
 }

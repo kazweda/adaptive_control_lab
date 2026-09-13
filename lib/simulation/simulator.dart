@@ -11,8 +11,10 @@ import 'history_manager.dart';
 import 'pid_manager.dart';
 import 'str_manager.dart';
 
-// DisturbancePreset はコンポーネント外から参照されるため export
+// プリセット関連のクラスはコンポーネント外から参照されるため export
 export 'disturbance_manager.dart' show DisturbancePreset;
+export 'pid_manager.dart' show PIDPreset;
+export 'str_manager.dart' show STRPreset;
 
 /// シミュレーション全体を管理するクラス
 class Simulator {
@@ -51,7 +53,7 @@ class Simulator {
   /// コンストラクタ
   Simulator({
     this.maxHistoryLength = 1000,
-    this.maxSteps = 1000,
+    this.maxSteps = 500,
     this.maxOutputAbs = 10.0,
     this.maxControlInputAbs = 10.0,
     this.rlsWarmupSteps = 10,
@@ -258,6 +260,30 @@ class Simulator {
 
   double get pidKd => _pidMgr.kd;
   set pidKd(double value) => _pidMgr.kd = value;
+
+  // === PIDプリセット ===
+
+  String get currentPidPresetName => _pidMgr.currentPresetName;
+
+  static List<PIDPreset> getAvailablePidPresets() {
+    return PIDManager.getAvailablePresets();
+  }
+
+  void applyPidPreset(String presetName) {
+    _pidMgr.applyPreset(presetName, isSecondOrder: _useSecondOrderPlant);
+  }
+
+  // === STR極プリセット ===
+
+  String get currentStrPresetName => _strMgr.currentPresetName;
+
+  static List<STRPreset> getAvailableStrPresets() {
+    return StrManager.getAvailablePresets();
+  }
+
+  void applyStrPreset(String presetName) {
+    _strMgr.applyPreset(presetName);
+  }
 
   /// シミュレーションを1ステップ進める
   void step() {

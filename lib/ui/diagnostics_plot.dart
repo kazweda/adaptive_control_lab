@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'components/horizontal_scroll_chart.dart';
 
 /// 残差を表示する簡易ラインチャート
 class ResidualPlot extends StatelessWidget {
@@ -7,6 +8,10 @@ class ResidualPlot extends StatelessWidget {
   final int maxDataPoints;
   final bool isRunning;
   final double scrollPosition;
+  // スクロール位置変更コールバック
+  final ValueChanged<double>? onScrollChanged;
+  // 外側にCardを付けるか（タブ内などで既にCardに包まれている場合はfalse）
+  final bool showCard;
 
   const ResidualPlot({
     super.key,
@@ -14,6 +19,8 @@ class ResidualPlot extends StatelessWidget {
     required this.maxDataPoints,
     required this.isRunning,
     this.scrollPosition = 0.0,
+    this.onScrollChanged,
+    this.showCard = true,
   });
 
   @override
@@ -22,32 +29,38 @@ class ResidualPlot extends StatelessWidget {
       return _buildEmptyCard(
         title: '残差 e_rls(k)',
         message: 'STR/RLS有効時に残差が表示されます',
+        showCard: showCard,
       );
     }
 
-    final range = _windowRange(residual.length, maxDataPoints, isRunning);
-    final spots = <FlSpot>[];
-    for (int i = range.start; i <= range.end; i++) {
-      spots.add(FlSpot(i.toDouble(), residual[i]));
-    }
+    final dataLength = residual.length;
+    final spots = <FlSpot>[
+      for (int i = 0; i < dataLength; i++) FlSpot(i.toDouble(), residual[i]),
+    ];
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '残差 e_rls(k) = y(k) - ŷ(k)',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 160,
-              child: LineChart(
+    final content = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '残差 e_rls(k) = y(k) - ŷ(k)',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          HorizontalScrollChart(
+            totalSteps: dataLength,
+            windowSteps: maxDataPoints,
+            isRunning: isRunning,
+            scrollStepPosition: scrollPosition,
+            onScrollStepChanged: onScrollChanged,
+            height: 160,
+            chartBuilder: (visibleStart, visibleEnd) {
+              final range = RangeValuesInt(visibleStart, visibleEnd);
+              return LineChart(
                 LineChartData(
-                  minX: range.start.toDouble(),
-                  maxX: range.end.toDouble(),
+                  minX: 0,
+                  maxX: (dataLength - 1).toDouble(),
                   minY: _minY(residual, range) - 0.1,
                   maxY: _maxY(residual, range) + 0.1,
                   gridData: FlGridData(show: true, horizontalInterval: 0.2),
@@ -113,31 +126,13 @@ class ResidualPlot extends StatelessWidget {
                   ),
                 ),
                 duration: const Duration(milliseconds: 0),
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+        ],
       ),
     );
-  }
-
-  RangeValuesInt _windowRange(int length, int window, bool running) {
-    if (length <= 1) {
-      return RangeValuesInt(0, (length - 1).clamp(0, length - 1));
-    }
-    if (running) {
-      final win = window >= length ? length : window;
-      final start = length - win;
-      return RangeValuesInt(start, length - 1);
-    }
-    // 停止時：スクロール位置に合わせて範囲を計算
-    final scrollPos = scrollPosition.clamp(
-      0.0,
-      (length - window).toDouble().clamp(0.0, double.infinity),
-    );
-    final start = scrollPos.toInt();
-    final end = (start + window - 1).clamp(0, length - 1);
-    return RangeValuesInt(start, end);
+    return showCard ? Card(child: content) : content;
   }
 
   double _minY(List<double> data, RangeValuesInt range) {
@@ -150,29 +145,32 @@ class ResidualPlot extends StatelessWidget {
     return values.reduce((a, b) => a > b ? a : b);
   }
 
-  Widget _buildEmptyCard({required String title, required String message}) {
-    return Card(
-      child: Container(
-        height: 160,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+  Widget _buildEmptyCard({
+    required String title,
+    required String message,
+    bool showCard = true,
+  }) {
+    final content = Container(
+      height: 160,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
+    return showCard ? Card(child: content) : content;
   }
 }
 
@@ -199,6 +197,11 @@ class ParameterTracePlot extends StatelessWidget {
   final List<double> actualB1;
   final List<double> actualB2;
 
+  // スクロール位置変更コールバック
+  final ValueChanged<double>? onScrollChanged;
+  // 外側にCardを付けるか（タブ内などで既にCardに包まれている場合はfalse）
+  final bool showCard;
+
   const ParameterTracePlot({
     super.key,
     required this.isSecondOrder,
@@ -217,6 +220,8 @@ class ParameterTracePlot extends StatelessWidget {
     required this.actualA2,
     required this.actualB1,
     required this.actualB2,
+    this.onScrollChanged,
+    this.showCard = true,
   });
 
   @override
@@ -226,31 +231,44 @@ class ParameterTracePlot extends StatelessWidget {
       return _buildEmptyCard(
         title: '推定パラメータトレース',
         message: 'STR/RLS有効時に推定パラメータが表示されます',
+        showCard: showCard,
       );
     }
 
-    final range = _windowRange(dataLength, maxDataPoints, isRunning);
-    final series = _buildSeries(range);
+    // 凡例は表示範囲に関わらず固定（系列の色分け一覧のため、全データ長で1回だけ計算）
+    final legendSeries = _buildSeries(
+      dataLength,
+      RangeValuesInt(0, dataLength - 1),
+    );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '推定パラメータの時系列',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Wrap(spacing: 12, runSpacing: 6, children: series.legend),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: isSecondOrder ? 220 : 180,
-              child: LineChart(
+    final content = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '推定パラメータの時系列',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Wrap(spacing: 12, runSpacing: 6, children: legendSeries.legend),
+          const SizedBox(height: 12),
+          HorizontalScrollChart(
+            totalSteps: dataLength,
+            windowSteps: maxDataPoints,
+            isRunning: isRunning,
+            scrollStepPosition: scrollPosition,
+            onScrollStepChanged: onScrollChanged,
+            height: isSecondOrder ? 220 : 180,
+            chartBuilder: (visibleStart, visibleEnd) {
+              final series = _buildSeries(
+                dataLength,
+                RangeValuesInt(visibleStart, visibleEnd),
+              );
+              return LineChart(
                 LineChartData(
-                  minX: range.start.toDouble(),
-                  maxX: range.end.toDouble(),
+                  minX: 0,
+                  maxX: (dataLength - 1).toDouble(),
                   minY: series.minY - 0.1,
                   maxY: series.maxY + 0.1,
                   gridData: FlGridData(show: true, horizontalInterval: 0.2),
@@ -298,12 +316,13 @@ class ParameterTracePlot extends StatelessWidget {
                   lineBarsData: series.bars,
                 ),
                 duration: const Duration(milliseconds: 0),
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+        ],
       ),
     );
+    return showCard ? Card(child: content) : content;
   }
 
   int _effectiveLength() {
@@ -313,26 +332,9 @@ class ParameterTracePlot extends StatelessWidget {
     return estA.length;
   }
 
-  RangeValuesInt _windowRange(int length, int window, bool running) {
-    if (length <= 1) {
-      return RangeValuesInt(0, (length - 1).clamp(0, length - 1));
-    }
-    if (running) {
-      final win = window >= length ? length : window;
-      final start = length - win;
-      return RangeValuesInt(start, length - 1);
-    }
-    // 停止時：スクロール位置に合わせて範囲を計算
-    final scrollPos = scrollPosition.clamp(
-      0.0,
-      (length - window).toDouble().clamp(0.0, double.infinity),
-    );
-    final start = scrollPos.toInt();
-    final end = (start + window - 1).clamp(0, length - 1);
-    return RangeValuesInt(start, end);
-  }
-
-  ParameterSeries _buildSeries(RangeValuesInt range) {
+  /// [fullLength]分の全スポットを構築しつつ、Y軸の最小/最大値は
+  /// [visibleRange]（現在スクロールで見えている範囲）のみから計算する。
+  ParameterSeries _buildSeries(int fullLength, RangeValuesInt visibleRange) {
     final bars = <LineChartBarData>[];
     final legend = <Widget>[];
 
@@ -347,9 +349,15 @@ class ParameterTracePlot extends StatelessWidget {
     }) {
       if (data.isEmpty) return;
       final spots = <FlSpot>[];
-      for (int i = range.start; i <= range.end && i < data.length; i++) {
+      for (int i = 0; i < fullLength && i < data.length; i++) {
+        spots.add(FlSpot(i.toDouble(), data[i]));
+      }
+      for (
+        int i = visibleRange.start;
+        i <= visibleRange.end && i < data.length;
+        i++
+      ) {
         final y = data[i];
-        spots.add(FlSpot(i.toDouble(), y));
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
       }
@@ -444,29 +452,32 @@ class ParameterTracePlot extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyCard({required String title, required String message}) {
-    return Card(
-      child: Container(
-        height: 180,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+  Widget _buildEmptyCard({
+    required String title,
+    required String message,
+    bool showCard = true,
+  }) {
+    final content = Container(
+      height: 180,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
+    return showCard ? Card(child: content) : content;
   }
 }
 
