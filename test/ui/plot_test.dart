@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TimeSeriesPlot', () {
-    testWidgets('停止時はスクロール位置0でmaxDataPoints点を描画', (tester) async {
+    testWidgets('常に全データ(0〜dataLength-1)が描画される（停止時）', (tester) async {
       final data = List<double>.generate(10, (i) => i.toDouble());
 
       await tester.pumpWidget(
@@ -25,14 +25,15 @@ void main() {
       final lineChart = tester.widget<LineChart>(find.byType(LineChart));
       final chartData = lineChart.data;
 
-      expect(chartData.minX, 0); // startIndex=scrollPosition=0
-      expect(chartData.maxX, 2); // endIndex=scrollPosition+maxDataPoints-1=2
-      expect(chartData.lineBarsData[0].spots.length, 3);
-      expect(chartData.lineBarsData[1].spots.length, 3);
-      expect(chartData.lineBarsData[2].spots.length, 3);
+      // チャート自体は常に全データを描画し、横スクロールで表示範囲を移動する
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 9);
+      expect(chartData.lineBarsData[0].spots.length, 10);
+      expect(chartData.lineBarsData[1].spots.length, 10);
+      expect(chartData.lineBarsData[2].spots.length, 10);
     });
 
-    testWidgets('実行中はウィンドウ制限（最新maxDataPointsのみ）', (tester) async {
+    testWidgets('実行中は最新maxDataPoints分にY軸が追従する', (tester) async {
       final data = List<double>.generate(10, (i) => i.toDouble());
 
       await tester.pumpWidget(
@@ -52,14 +53,15 @@ void main() {
       final lineChart = tester.widget<LineChart>(find.byType(LineChart));
       final chartData = lineChart.data;
 
-      expect(chartData.minX, 7); // startIndex=dataLength-windowLen
-      expect(chartData.maxX, 9); // endIndex=dataLength-1
-      expect(chartData.lineBarsData[0].spots.length, 3);
-      expect(chartData.lineBarsData[1].spots.length, 3);
-      expect(chartData.lineBarsData[2].spots.length, 3);
+      // X軸は常に全範囲、Y軸は最新3点[7,8,9]に基づいて自動スケールする
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 9);
+      expect(chartData.minY, 6); // floor(7 - 0.5)
+      expect(chartData.maxY, 10); // ceil(9 + 0.5)
+      expect(chartData.lineBarsData[0].spots.length, 10);
     });
 
-    testWidgets('停止時はスクロールバーが表示される', (tester) async {
+    testWidgets('停止時は横スクロール可能、実行中はスクロール不可', (tester) async {
       final data = List<double>.generate(10, (i) => i.toDouble());
 
       await tester.pumpWidget(
@@ -76,11 +78,15 @@ void main() {
         ),
       );
 
-      // Slider（スクロールバー）が表示されている
-      expect(find.byType(Slider), findsOneWidget);
+      expect(find.byType(Scrollbar), findsOneWidget);
+      final scrollView = tester.widget<SingleChildScrollView>(
+        find.byType(SingleChildScrollView),
+      );
+      expect(scrollView.physics, isA<AlwaysScrollableScrollPhysics>());
+      expect(scrollView.scrollDirection, Axis.horizontal);
     });
 
-    testWidgets('実行中はスクロールバーが非表示', (tester) async {
+    testWidgets('実行中は横スクロールが無効化される', (tester) async {
       final data = List<double>.generate(10, (i) => i.toDouble());
 
       await tester.pumpWidget(
@@ -97,11 +103,13 @@ void main() {
         ),
       );
 
-      // Slider（スクロールバー）が非表示
-      expect(find.byType(Slider), findsNothing);
+      final scrollView = tester.widget<SingleChildScrollView>(
+        find.byType(SingleChildScrollView),
+      );
+      expect(scrollView.physics, isA<NeverScrollableScrollPhysics>());
     });
 
-    testWidgets('停止時：スライダー操作でデータ範囲が変更される', (tester) async {
+    testWidgets('停止時：チャートをドラッグするとonScrollChangedで位置が進む', (tester) async {
       final data = List<double>.generate(10, (i) => i.toDouble());
       double scrollPos = 0.0;
 
@@ -127,19 +135,13 @@ void main() {
         ),
       );
 
-      // 初期状態：startIndex=0
-      var lineChart = tester.widget<LineChart>(find.byType(LineChart));
-      var chartData = lineChart.data;
-      expect(chartData.minX, 0);
+      expect(scrollPos, 0.0);
 
-      // スライダーを最後に移動
-      await tester.drag(find.byType(Slider), const Offset(100, 0));
+      // チャートを左方向にドラッグして先頭以外を表示する
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(-300, 0));
       await tester.pumpAndSettle();
 
-      // スライダー移動後：startIndex が変更される
-      lineChart = tester.widget<LineChart>(find.byType(LineChart));
-      chartData = lineChart.data;
-      expect(chartData.minX, greaterThan(0));
+      expect(scrollPos, greaterThan(0.0));
     });
 
     testWidgets('エッジケース：データ長 < maxDataPoints の場合', (tester) async {
@@ -194,7 +196,7 @@ void main() {
       expect(chartData.lineBarsData[0].spots.length, 3);
     });
 
-    testWidgets('実行中 → 停止時：最新データが見える位置に初期化', (tester) async {
+    testWidgets('実行中：データが増えると常に最新ウィンドウにY軸が追従する', (tester) async {
       var data = List<double>.generate(5, (i) => i.toDouble());
 
       final widget = MaterialApp(
@@ -214,7 +216,7 @@ void main() {
                     data = List<double>.generate(10, (i) => i.toDouble());
                     setState(() {});
                   },
-                  child: const Text('Stop'),
+                  child: const Text('Grow'),
                 ),
               ],
             ),
@@ -224,19 +226,23 @@ void main() {
 
       await tester.pumpWidget(widget);
 
-      // 実行中：最新2点のみ表示
+      // 実行中：最新2点[3,4]にY軸が追従
       var lineChart = tester.widget<LineChart>(find.byType(LineChart));
       var chartData = lineChart.data;
-      expect(chartData.minX, 3); // 最新2点：[3, 4]
+      expect(chartData.minY, 2); // floor(3 - 0.5)
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 4);
 
-      // 停止ボタンを押す
+      // データが10点に増える
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
 
-      // 停止時：最新データが見える位置に初期化
+      // 引き続き実行中：最新2点[8,9]にY軸が追従
       lineChart = tester.widget<LineChart>(find.byType(LineChart));
       chartData = lineChart.data;
-      expect(chartData.minX, 8); // 最新2点：[8, 9]
+      expect(chartData.minY, 7); // floor(8 - 0.5)
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 9);
     });
   });
 }
