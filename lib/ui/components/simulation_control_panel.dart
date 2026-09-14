@@ -78,9 +78,14 @@ class SimulationControlPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            ControllerSelectorPanel(
-              selectedControllerIndex: selectedControllerIndex,
-              onChanged: onControllerChanged,
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _maxButtonWidth),
+                child: ControllerSelectorPanel(
+                  selectedControllerIndex: selectedControllerIndex,
+                  onChanged: onControllerChanged,
+                ),
+              ),
             ),
           ],
         ),
