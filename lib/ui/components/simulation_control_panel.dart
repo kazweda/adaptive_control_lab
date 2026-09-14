@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'controller_selector_panel.dart';
 
-/// 操作パネル（スタート/ストップ/リセット）
+/// 操作パネル（スタート/ストップ/リセット、PID/STR切り替え）
 class SimulationControlPanel extends StatelessWidget {
   final bool isRunning;
   final VoidCallback onStart;
   final VoidCallback onStop;
   final VoidCallback onReset;
+  final int selectedControllerIndex;
+  final ValueChanged<int> onControllerChanged;
 
   const SimulationControlPanel({
     super.key,
@@ -13,6 +16,8 @@ class SimulationControlPanel extends StatelessWidget {
     required this.onStart,
     required this.onStop,
     required this.onReset,
+    required this.selectedControllerIndex,
+    required this.onControllerChanged,
   });
 
   // ウィンドウ幅が広い場合にボタンが間延びしすぎないようにする上限幅
@@ -71,6 +76,11 @@ class SimulationControlPanel extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+            ControllerSelectorPanel(
+              selectedControllerIndex: selectedControllerIndex,
+              onChanged: onControllerChanged,
             ),
           ],
         ),

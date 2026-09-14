@@ -58,7 +58,7 @@ void main() {
     expect(find.text('実行中'), findsOneWidget);
   });
 
-  testWidgets('目標値・PIDゲイン・プラントパラメータのUIが表示される', (WidgetTester tester) async {
+  testWidgets('PIDゲイン・プラントパラメータのUIが表示される', (WidgetTester tester) async {
     // テスト用の画面サイズを設定
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1.0;
@@ -72,9 +72,11 @@ void main() {
     });
 
     // 各セクションの確認
-    expect(find.text('目標値'), findsOneWidget);
     expect(find.text('PID ゲイン調整'), findsOneWidget);
     expect(find.text('プラント設定（自動制御される対象）'), findsOneWidget);
+
+    // 目標値は状態カードに固定値として表示される（設定用スライダーは削除済み）
+    expect(find.text('目標値：'), findsOneWidget);
   });
 
   testWidgets('表示ウィンドウの選択肢と切り替えができる', (WidgetTester tester) async {
@@ -133,16 +135,16 @@ void main() {
           .first,
     );
 
-    // PIDとSTRのセグメントボタンが表示される
+    // PIDとSTRのセグメントボタン（操作パネル内に組み込み）が表示される
     expect(find.text('PID制御'), findsOneWidget);
     expect(find.text('STR制御'), findsOneWidget);
 
     // PID/STR両方のカードが常時マウントされている
     expect(find.text('PID ゲイン調整'), findsOneWidget);
-    expect(find.text('STR制御器'), findsOneWidget);
+    expect(find.text('応答特性の調整'), findsOneWidget);
 
     // 初期状態ではPIDが選択されているため、STR側がグレーアウトされている
-    expect(opacityAncestor(find.text('STR制御器')).opacity, lessThan(1.0));
+    expect(opacityAncestor(find.text('応答特性の調整')).opacity, lessThan(1.0));
 
     // STRタブをタップ
     await tester.tap(find.text('STR制御'));
@@ -150,7 +152,7 @@ void main() {
 
     // 両方のカードは引き続き表示され、今度はPID側がグレーアウトされる
     expect(find.text('PID ゲイン調整'), findsOneWidget);
-    expect(find.text('STR制御器'), findsOneWidget);
+    expect(find.text('応答特性の調整'), findsOneWidget);
     expect(opacityAncestor(find.text('PID ゲイン調整')).opacity, lessThan(1.0));
 
     // PIDタブに戻す
@@ -159,7 +161,7 @@ void main() {
 
     // PID側のグレーアウトが解除される
     expect(find.text('PID ゲイン調整'), findsOneWidget);
-    expect(opacityAncestor(find.text('STR制御器')).opacity, lessThan(1.0));
+    expect(opacityAncestor(find.text('応答特性の調整')).opacity, lessThan(1.0));
   });
 
   testWidgets('AppBar にバージョンが表示され、PackageInfo 取得後に更新される', (

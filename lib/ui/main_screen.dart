@@ -7,8 +7,6 @@ import 'diagnostics_plot.dart';
 import 'components/chart_window_selector.dart';
 import 'components/simulation_status_panel.dart';
 import 'components/simulation_control_panel.dart';
-import 'components/target_value_panel.dart';
-import 'components/controller_selector_panel.dart';
 import 'components/disturbance_panel.dart';
 import 'components/plant_params_panel.dart';
 import 'components/responsive_card_grid.dart';
@@ -214,6 +212,13 @@ class _MainScreenState extends State<MainScreen> {
                     onStart: _startSimulation,
                     onStop: _stopSimulation,
                     onReset: _resetSimulation,
+                    selectedControllerIndex: _selectedControllerIndex,
+                    onControllerChanged: (index) {
+                      setState(() {
+                        _selectedControllerIndex = index;
+                        simulator.setStrEnabled(index == 1);
+                      });
+                    },
                   ),
                 ],
               ),
@@ -268,34 +273,12 @@ class _MainScreenState extends State<MainScreen> {
               // === 設定カード群（画面幅に応じて1〜3カラムのレスポンシブ配置） ===
               ResponsiveCardGrid(
                 children: [
-                  // 目標値表示（値は1に固定）
-                  TargetValuePanel(simulator: simulator),
-
-                  // コントローラー選択タブ + 設定画面
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ControllerSelectorPanel(
-                        selectedControllerIndex: _selectedControllerIndex,
-                        onChanged: (index) {
-                          setState(() {
-                            _selectedControllerIndex = index;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildControllerScreen(),
-                    ],
-                  ),
+                  // コントローラー設定画面（PID/STR）
+                  _buildControllerScreen(),
 
                   // プラントパラメータ調整
                   PlantParamsPanel(
                     simulator: simulator,
-                    onPlantOrderChanged: (useSecondOrder) {
-                      setState(() {
-                        simulator.setPlantOrder(useSecondOrder: useSecondOrder);
-                      });
-                    },
                     onParamAChanged: (value) {
                       setState(() {
                         simulator.plantParamA = value;
@@ -304,26 +287,6 @@ class _MainScreenState extends State<MainScreen> {
                     onParamBChanged: (value) {
                       setState(() {
                         simulator.plantParamB = value;
-                      });
-                    },
-                    onParamA1Changed: (value) {
-                      setState(() {
-                        simulator.plantParamA1 = value;
-                      });
-                    },
-                    onParamA2Changed: (value) {
-                      setState(() {
-                        simulator.plantParamA2 = value;
-                      });
-                    },
-                    onParamB1Changed: (value) {
-                      setState(() {
-                        simulator.plantParamB1 = value;
-                      });
-                    },
-                    onParamB2Changed: (value) {
-                      setState(() {
-                        simulator.plantParamB2 = value;
                       });
                     },
                   ),

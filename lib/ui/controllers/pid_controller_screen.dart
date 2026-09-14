@@ -19,11 +19,18 @@ class PIDControllerScreen extends StatefulWidget {
 class _PIDControllerScreenState extends State<PIDControllerScreen> {
   @override
   Widget build(BuildContext context) {
-    return _buildPIDGainsSection();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildPresetCard(),
+        const SizedBox(height: 16),
+        _buildDetailCard(),
+      ],
+    );
   }
 
-  /// PIDゲイン調整セクション（プリセット + 詳細設定）
-  Widget _buildPIDGainsSection() {
+  /// プリセット選択カード
+  Widget _buildPresetCard() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -36,57 +43,62 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
             ),
             const SizedBox(height: 12),
             _buildPresetSelector(),
-            Theme(
-              data: Theme.of(
-                context,
-              ).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                childrenPadding: const EdgeInsets.only(top: 8),
-                title: const Text(
-                  '詳細設定（個別に調整）',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                children: [
-                  // Kp（比例ゲイン）
-                  _buildGainSlider(
-                    label: 'Kp（比例）',
-                    value: widget.simulator.pidKp,
-                    onChanged: (value) {
-                      widget.simulator.pidKp = value;
-                      widget.onUpdate();
-                    },
-                    description: '素早く反応する程度',
-                    max: 1.5,
-                  ),
-                  const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  // Ki（積分ゲイン）
-                  _buildGainSlider(
-                    label: 'Ki（積分）',
-                    value: widget.simulator.pidKi,
-                    onChanged: (value) {
-                      widget.simulator.pidKi = value;
-                      widget.onUpdate();
-                    },
-                    description: 'ズレを直す強さ',
-                    max: 1.0,
-                  ),
-                  const SizedBox(height: 16),
+  /// 詳細設定カード（ゲインを個別に調整）
+  Widget _buildDetailCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '詳細設定（個別に調整）',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
 
-                  // Kd（微分ゲイン）
-                  _buildGainSlider(
-                    label: 'Kd（微分）',
-                    value: widget.simulator.pidKd,
-                    onChanged: (value) {
-                      widget.simulator.pidKd = value;
-                      widget.onUpdate();
-                    },
-                    description: '揺れを抑える程度',
-                    max: 1.0,
-                  ),
-                ],
-              ),
+            // Kp（比例ゲイン）
+            _buildGainSlider(
+              label: 'Kp（比例）',
+              value: widget.simulator.pidKp,
+              onChanged: (value) {
+                widget.simulator.pidKp = value;
+                widget.onUpdate();
+              },
+              description: '素早く反応する程度',
+              max: 1.5,
+            ),
+            const SizedBox(height: 16),
+
+            // Ki（積分ゲイン）
+            _buildGainSlider(
+              label: 'Ki（積分）',
+              value: widget.simulator.pidKi,
+              onChanged: (value) {
+                widget.simulator.pidKi = value;
+                widget.onUpdate();
+              },
+              description: 'ズレを直す強さ',
+              max: 1.0,
+            ),
+            const SizedBox(height: 16),
+
+            // Kd（微分ゲイン）
+            _buildGainSlider(
+              label: 'Kd（微分）',
+              value: widget.simulator.pidKd,
+              onChanged: (value) {
+                widget.simulator.pidKd = value;
+                widget.onUpdate();
+              },
+              description: '揺れを抑える程度',
+              max: 1.0,
             ),
           ],
         ),
