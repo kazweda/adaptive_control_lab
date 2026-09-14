@@ -114,7 +114,9 @@ void main() {
     expect(find.text('全履歴'), findsOneWidget);
   });
 
-  testWidgets('コントローラー選択タブが表示され切り替えができる', (WidgetTester tester) async {
+  testWidgets('コントローラー選択タブでPID/STRの有効表示が切り替わる', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1.0;
 
@@ -125,29 +127,39 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
+    Opacity opacityAncestor(Finder textFinder) => tester.widget<Opacity>(
+      find
+          .ancestor(of: textFinder, matching: find.byType(Opacity))
+          .first,
+    );
+
     // PIDとSTRのセグメントボタンが表示される
     expect(find.text('PID制御'), findsOneWidget);
     expect(find.text('STR制御'), findsOneWidget);
 
-    // 初期状態ではPIDが選択されている（PIDゲイン調整が表示される）
+    // PID/STR両方のカードが常時マウントされている
     expect(find.text('PID ゲイン調整'), findsOneWidget);
+    expect(find.text('STR制御器'), findsOneWidget);
+
+    // 初期状態ではPIDが選択されているため、STR側がグレーアウトされている
+    expect(opacityAncestor(find.text('STR制御器')).opacity, lessThan(1.0));
 
     // STRタブをタップ
     await tester.tap(find.text('STR制御'));
     await tester.pump();
 
-    // STR画面のSTR制御器トグルが表示される
+    // 両方のカードは引き続き表示され、今度はPID側がグレーアウトされる
+    expect(find.text('PID ゲイン調整'), findsOneWidget);
     expect(find.text('STR制御器'), findsOneWidget);
-
-    // PIDゲイン調整は表示されない
-    expect(find.text('PID ゲイン調整'), findsNothing);
+    expect(opacityAncestor(find.text('PID ゲイン調整')).opacity, lessThan(1.0));
 
     // PIDタブに戻す
     await tester.tap(find.text('PID制御'));
     await tester.pump();
 
-    // PIDゲイン調整が再び表示される
+    // PID側のグレーアウトが解除される
     expect(find.text('PID ゲイン調整'), findsOneWidget);
+    expect(opacityAncestor(find.text('STR制御器')).opacity, lessThan(1.0));
   });
 
   testWidgets('AppBar にバージョンが表示され、PackageInfo 取得後に更新される', (

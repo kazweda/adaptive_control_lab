@@ -16,9 +16,9 @@ void main() {
       expect(manager.getNext(), 0.0);
     });
 
-    test('getAvailablePresets は12個のプリセットを返す', () {
+    test('getAvailablePresets は7個のプリセットを返す', () {
       final presets = DisturbanceManager.getAvailablePresets();
-      expect(presets.length, 12);
+      expect(presets.length, 7);
     });
 
     test('全プリセット名が想定通り', () {
@@ -26,16 +26,11 @@ void main() {
       final names = presets.map((p) => p.name).toList();
 
       expect(names, contains('none'));
-      expect(names, contains('step_early'));
-      expect(names, contains('step_mid'));
+      expect(names, contains('step_small'));
       expect(names, contains('step_large'));
-      expect(names, contains('impulse_small'));
-      expect(names, contains('impulse_large'));
       expect(names, contains('sinusoid_slow'));
-      expect(names, contains('sinusoid_mid'));
       expect(names, contains('sinusoid_fast'));
       expect(names, contains('noise_small'));
-      expect(names, contains('noise_mid'));
       expect(names, contains('noise_large'));
     });
 
@@ -46,16 +41,16 @@ void main() {
       expect(manager.getNext(), 0.0);
     });
 
-    test('applyPreset で step_mid を適用', () {
-      manager.applyPreset('step_mid');
+    test('applyPreset で step_small を適用', () {
+      manager.applyPreset('step_small');
       expect(manager.getType(), DisturbanceType.step);
-      expect(manager.currentPresetName, 'ステップ外乱（中期）');
+      expect(manager.currentPresetName, 'ステップ外乱（小）');
     });
 
-    test('applyPreset で noise_mid を適用', () {
-      manager.applyPreset('noise_mid');
+    test('applyPreset で noise_small を適用', () {
+      manager.applyPreset('noise_small');
       expect(manager.getType(), DisturbanceType.noise);
-      expect(manager.currentPresetName, 'ガウス雑音（中）');
+      expect(manager.currentPresetName, 'ガウス雑音（小）');
 
       // ノイズはランダム値を返す（0以外）
       final noise = manager.getNext();
@@ -82,7 +77,7 @@ void main() {
     });
 
     test('reset で外乱状態がリセットされる', () {
-      manager.applyPreset('step_mid');
+      manager.applyPreset('step_small');
 
       // 複数回呼び出してステップカウンタを進める
       for (int i = 0; i < 100; i++) {
@@ -99,8 +94,8 @@ void main() {
     });
 
     test('プリセット適用後にタイプ変更するとカスタムになる', () {
-      manager.applyPreset('step_mid');
-      expect(manager.currentPresetName, 'ステップ外乱（中期）');
+      manager.applyPreset('step_small');
+      expect(manager.currentPresetName, 'ステップ外乱（小）');
 
       manager.setType(DisturbanceType.impulse);
       expect(manager.currentPresetName, 'Custom');
@@ -127,19 +122,19 @@ void main() {
 
     test('step 外乱プリセットのパラメータ確認', () {
       final presets = DisturbanceManager.getAvailablePresets();
-      final stepEarly = presets.firstWhere((p) => p.name == 'step_early');
+      final stepSmall = presets.firstWhere((p) => p.name == 'step_small');
 
-      expect(stepEarly.type, DisturbanceType.step);
-      expect(stepEarly.amplitude, 0.2);
-      expect(stepEarly.startStep, 10);
+      expect(stepSmall.type, DisturbanceType.step);
+      expect(stepSmall.amplitude, 0.2);
+      expect(stepSmall.startStep, 50);
     });
 
     test('noise 外乱プリセットは固定シードで再現性あり', () {
       final presets = DisturbanceManager.getAvailablePresets();
-      final noiseMid = presets.firstWhere((p) => p.name == 'noise_mid');
+      final noiseSmall = presets.firstWhere((p) => p.name == 'noise_small');
 
-      expect(noiseMid.type, DisturbanceType.noise);
-      expect(noiseMid.noiseSeed, 42); // 再現性のための固定シード
+      expect(noiseSmall.type, DisturbanceType.noise);
+      expect(noiseSmall.noiseSeed, 42); // 再現性のための固定シード
     });
 
     test('sinusoid 外乱プリセットのパラメータ確認', () {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// シミュレーション操作パネル（スタート/ストップ/リセット）
+/// 操作パネル（スタート/ストップ/リセット）
 class SimulationControlPanel extends StatelessWidget {
   final bool isRunning;
   final VoidCallback onStart;
@@ -15,6 +15,9 @@ class SimulationControlPanel extends StatelessWidget {
     required this.onReset,
   });
 
+  // ウィンドウ幅が広い場合にボタンが間延びしすぎないようにする上限幅
+  static const double _maxButtonWidth = 280.0;
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -24,39 +27,49 @@ class SimulationControlPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'シミュレーション操作',
+              '操作パネル',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: isRunning ? null : onStart,
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('スタート'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.green,
-                disabledBackgroundColor: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: isRunning ? onStop : null,
-              icon: const Icon(Icons.stop),
-              label: const Text('ストップ'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.orange,
-                disabledBackgroundColor: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: onReset,
-              icon: const Icon(Icons.refresh),
-              label: const Text('リセット'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.red,
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _maxButtonWidth),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: isRunning ? null : onStart,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('スタート'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.green,
+                        disabledBackgroundColor: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: isRunning ? onStop : null,
+                      icon: const Icon(Icons.stop),
+                      label: const Text('ストップ'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.orange,
+                        disabledBackgroundColor: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: onReset,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('リセット'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

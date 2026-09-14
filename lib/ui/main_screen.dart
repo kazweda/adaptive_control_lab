@@ -123,19 +123,34 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  /// コントローラー設定画面（PIDまたはSTR）
+  /// コントローラー設定画面（PID/STR両方を常時表示し、非選択側をグレーアウト）
   Widget _buildControllerScreen() {
-    if (_selectedControllerIndex == 0) {
-      return PIDControllerScreen(
-        simulator: simulator,
-        onUpdate: () => setState(() {}),
-      );
-    } else {
-      return STRControllerScreen(
-        simulator: simulator,
-        onUpdate: () => setState(() {}),
-      );
-    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildControllerCard(
+          isActive: _selectedControllerIndex == 0,
+          child: PIDControllerScreen(
+            simulator: simulator,
+            onUpdate: () => setState(() {}),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildControllerCard(
+          isActive: _selectedControllerIndex == 1,
+          child: STRControllerScreen(
+            simulator: simulator,
+            onUpdate: () => setState(() {}),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 選択されていないコントローラーカードをグレーアウトし操作不可にする
+  Widget _buildControllerCard({required bool isActive, required Widget child}) {
+    if (isActive) return child;
+    return Opacity(opacity: 0.4, child: IgnorePointer(child: child));
   }
 
   @override
@@ -194,29 +209,19 @@ class _MainScreenState extends State<MainScreen> {
                       });
                     },
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SimulationControlPanel(
-                        isRunning: isRunning,
-                        onStart: _startSimulation,
-                        onStop: _stopSimulation,
-                        onReset: _resetSimulation,
-                      ),
-                      const SizedBox(height: 16),
-                      SimulationStatusPanel(
-                        simulator: simulator,
-                        isRunning: isRunning,
-                      ),
-                    ],
+                  SimulationControlPanel(
+                    isRunning: isRunning,
+                    onStart: _startSimulation,
+                    onStop: _stopSimulation,
+                    onReset: _resetSimulation,
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // === 残差チャート（1/2幅）＋ 推定パラメータチャート（1/2幅） ===
+              // === 残差チャート（1/3幅）＋ 推定パラメータチャート（1/3幅）＋ 状態（1/3幅） ===
               ResponsiveSplitRow(
-                flex: const [1, 1],
+                flex: const [1, 1, 1],
                 children: [
                   ResidualPlot(
                     residual: simulator.historyResidual,
@@ -252,6 +257,10 @@ class _MainScreenState extends State<MainScreen> {
                     actualB1: simulator.historyActualB1,
                     actualB2: simulator.historyActualB2,
                   ),
+                  SimulationStatusPanel(
+                    simulator: simulator,
+                    isRunning: isRunning,
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -259,15 +268,8 @@ class _MainScreenState extends State<MainScreen> {
               // === 設定カード群（画面幅に応じて1〜3カラムのレスポンシブ配置） ===
               ResponsiveCardGrid(
                 children: [
-                  // 目標値調整
-                  TargetValuePanel(
-                    simulator: simulator,
-                    onChanged: (value) {
-                      setState(() {
-                        simulator.targetValue = value;
-                      });
-                    },
-                  ),
+                  // 目標値表示（値は1に固定）
+                  TargetValuePanel(simulator: simulator),
 
                   // コントローラー選択タブ + 設定画面
                   Column(
