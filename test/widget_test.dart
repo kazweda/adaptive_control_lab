@@ -116,9 +116,7 @@ void main() {
     expect(find.text('全履歴'), findsOneWidget);
   });
 
-  testWidgets('コントローラー選択タブでPID/STRの有効表示が切り替わる', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('コントローラー選択タブでPID/STRの有効表示が切り替わる', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1.0;
 
@@ -130,9 +128,7 @@ void main() {
     });
 
     Opacity opacityAncestor(Finder textFinder) => tester.widget<Opacity>(
-      find
-          .ancestor(of: textFinder, matching: find.byType(Opacity))
-          .first,
+      find.ancestor(of: textFinder, matching: find.byType(Opacity)).first,
     );
 
     // PIDとSTRのセグメントボタン（操作パネル内に組み込み）が表示される
