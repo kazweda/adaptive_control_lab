@@ -58,7 +58,7 @@ void main() {
     expect(find.text('実行中'), findsOneWidget);
   });
 
-  testWidgets('目標値・PIDゲイン・プラントパラメータのUIが表示される', (WidgetTester tester) async {
+  testWidgets('PIDゲイン・プラントパラメータのUIが表示される', (WidgetTester tester) async {
     // テスト用の画面サイズを設定
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1.0;
@@ -72,9 +72,11 @@ void main() {
     });
 
     // 各セクションの確認
-    expect(find.text('目標値'), findsOneWidget);
     expect(find.text('PID ゲイン調整'), findsOneWidget);
     expect(find.text('プラント設定（自動制御される対象）'), findsOneWidget);
+
+    // 目標値は状態カードに固定値として表示される（設定用スライダーは削除済み）
+    expect(find.text('目標値：'), findsOneWidget);
   });
 
   testWidgets('表示ウィンドウの選択肢と切り替えができる', (WidgetTester tester) async {
@@ -114,7 +116,7 @@ void main() {
     expect(find.text('全履歴'), findsOneWidget);
   });
 
-  testWidgets('コントローラー選択タブが表示され切り替えができる', (WidgetTester tester) async {
+  testWidgets('コントローラー選択タブでPID/STRの有効表示が切り替わる', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1.0;
 
@@ -125,29 +127,37 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    // PIDとSTRのセグメントボタンが表示される
+    Opacity opacityAncestor(Finder textFinder) => tester.widget<Opacity>(
+      find.ancestor(of: textFinder, matching: find.byType(Opacity)).first,
+    );
+
+    // PIDとSTRのセグメントボタン（操作パネル内に組み込み）が表示される
     expect(find.text('PID制御'), findsOneWidget);
     expect(find.text('STR制御'), findsOneWidget);
 
-    // 初期状態ではPIDが選択されている（PIDゲイン調整が表示される）
+    // PID/STR両方のカードが常時マウントされている
     expect(find.text('PID ゲイン調整'), findsOneWidget);
+    expect(find.text('応答特性の調整'), findsOneWidget);
+
+    // 初期状態ではPIDが選択されているため、STR側がグレーアウトされている
+    expect(opacityAncestor(find.text('応答特性の調整')).opacity, lessThan(1.0));
 
     // STRタブをタップ
     await tester.tap(find.text('STR制御'));
     await tester.pump();
 
-    // STR画面のSTR制御器トグルが表示される
-    expect(find.text('STR制御器'), findsOneWidget);
-
-    // PIDゲイン調整は表示されない
-    expect(find.text('PID ゲイン調整'), findsNothing);
+    // 両方のカードは引き続き表示され、今度はPID側がグレーアウトされる
+    expect(find.text('PID ゲイン調整'), findsOneWidget);
+    expect(find.text('応答特性の調整'), findsOneWidget);
+    expect(opacityAncestor(find.text('PID ゲイン調整')).opacity, lessThan(1.0));
 
     // PIDタブに戻す
     await tester.tap(find.text('PID制御'));
     await tester.pump();
 
-    // PIDゲイン調整が再び表示される
+    // PID側のグレーアウトが解除される
     expect(find.text('PID ゲイン調整'), findsOneWidget);
+    expect(opacityAncestor(find.text('応答特性の調整')).opacity, lessThan(1.0));
   });
 
   testWidgets('AppBar にバージョンが表示され、PackageInfo 取得後に更新される', (

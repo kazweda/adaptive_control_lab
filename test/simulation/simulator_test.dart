@@ -359,42 +359,37 @@ void main() {
   });
 
   group('Disturbance Presets', () {
-    test('getAvailablePresetsが12個のプリセットを返す', () {
+    test('getAvailablePresetsが7個のプリセットを返す', () {
       final presets = Simulator.getAvailablePresets();
-      expect(presets.length, 12);
+      expect(presets.length, 7);
       expect(presets.map((p) => p.name), contains('none'));
     });
 
-    test('すべての12個のプリセット名が存在する', () {
+    test('すべての7個のプリセット名が存在する', () {
       final presets = Simulator.getAvailablePresets();
       final presetNames = presets.map((p) => p.name).toSet();
       final expectedNames = {
         'none',
-        'step_early',
-        'step_mid',
+        'step_small',
         'step_large',
-        'impulse_small',
-        'impulse_large',
         'sinusoid_slow',
-        'sinusoid_mid',
         'sinusoid_fast',
         'noise_small',
-        'noise_mid',
         'noise_large',
       };
-      expect(presetNames, expectedNames, reason: '全12個の予期されたプリセット名が存在すること');
+      expect(presetNames, expectedNames, reason: '全7個の予期されたプリセット名が存在すること');
     });
 
     test('プリセットを適用すると外乱タイプが変更される', () {
       final sim = Simulator();
-      sim.applyDisturbancePreset('step_early');
+      sim.applyDisturbancePreset('step_small');
       expect(sim.disturbanceType, DisturbanceType.step);
     });
 
     test('複数のプリセットを順次切り替え可能', () {
       final sim = Simulator();
-      sim.applyDisturbancePreset('impulse_small');
-      expect(sim.disturbanceType, DisturbanceType.impulse);
+      sim.applyDisturbancePreset('step_large');
+      expect(sim.disturbanceType, DisturbanceType.step);
 
       sim.applyDisturbancePreset('sinusoid_fast');
       expect(sim.disturbanceType, DisturbanceType.sinusoid);
@@ -415,7 +410,7 @@ void main() {
 
     test('ノイズプリセットのシード固定で再現性がある', () {
       final sim1 = Simulator();
-      sim1.applyDisturbancePreset('noise_mid');
+      sim1.applyDisturbancePreset('noise_small');
       sim1.targetValue = 1.0;
       List<double> history1 = [];
 
@@ -425,7 +420,7 @@ void main() {
       }
 
       final sim2 = Simulator();
-      sim2.applyDisturbancePreset('noise_mid');
+      sim2.applyDisturbancePreset('noise_small');
       sim2.targetValue = 1.0;
       List<double> history2 = [];
 
@@ -440,7 +435,7 @@ void main() {
 
     test('カスタムパラメータでプリセット後の外乱を上書き可能', () {
       final sim = Simulator();
-      sim.applyDisturbancePreset('step_early');
+      sim.applyDisturbancePreset('step_small');
       expect(sim.disturbanceType, DisturbanceType.step);
 
       // パラメータを手動で変更して外乱タイプを変える
@@ -456,7 +451,7 @@ void main() {
 
     test('reset後は外乱状態とプリセット名もリセット', () {
       final sim = Simulator();
-      sim.applyDisturbancePreset('noise_mid');
+      sim.applyDisturbancePreset('noise_small');
       sim.targetValue = 1.0;
 
       for (int i = 0; i < 5; i++) {

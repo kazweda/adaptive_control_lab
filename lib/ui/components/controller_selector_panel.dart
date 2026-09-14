@@ -14,16 +14,18 @@ class ControllerSelectorPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SegmentedButton<int>(
+      showSelectedIcon: false,
+      style: SegmentedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+      ),
       segments: const [
         ButtonSegment<int>(
           value: 0,
-          label: Text('PID制御'),
-          icon: Icon(Icons.tune),
+          label: FittedBox(fit: BoxFit.scaleDown, child: Text('PID制御')),
         ),
         ButtonSegment<int>(
           value: 1,
-          label: Text('STR制御'),
-          icon: Icon(Icons.auto_graph),
+          label: FittedBox(fit: BoxFit.scaleDown, child: Text('STR制御')),
         ),
       ],
       selected: {selectedControllerIndex},

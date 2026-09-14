@@ -7,8 +7,6 @@ import 'diagnostics_plot.dart';
 import 'components/chart_window_selector.dart';
 import 'components/simulation_status_panel.dart';
 import 'components/simulation_control_panel.dart';
-import 'components/target_value_panel.dart';
-import 'components/controller_selector_panel.dart';
 import 'components/disturbance_panel.dart';
 import 'components/plant_params_panel.dart';
 import 'components/responsive_card_grid.dart';
@@ -123,19 +121,34 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  /// コントローラー設定画面（PIDまたはSTR）
+  /// コントローラー設定画面（PID/STR両方を常時表示し、非選択側をグレーアウト）
   Widget _buildControllerScreen() {
-    if (_selectedControllerIndex == 0) {
-      return PIDControllerScreen(
-        simulator: simulator,
-        onUpdate: () => setState(() {}),
-      );
-    } else {
-      return STRControllerScreen(
-        simulator: simulator,
-        onUpdate: () => setState(() {}),
-      );
-    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildControllerCard(
+          isActive: _selectedControllerIndex == 0,
+          child: PIDControllerScreen(
+            simulator: simulator,
+            onUpdate: () => setState(() {}),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildControllerCard(
+          isActive: _selectedControllerIndex == 1,
+          child: STRControllerScreen(
+            simulator: simulator,
+            onUpdate: () => setState(() {}),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 選択されていないコントローラーカードをグレーアウトし操作不可にする
+  Widget _buildControllerCard({required bool isActive, required Widget child}) {
+    if (isActive) return child;
+    return Opacity(opacity: 0.4, child: IgnorePointer(child: child));
   }
 
   @override
@@ -194,29 +207,26 @@ class _MainScreenState extends State<MainScreen> {
                       });
                     },
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SimulationControlPanel(
-                        isRunning: isRunning,
-                        onStart: _startSimulation,
-                        onStop: _stopSimulation,
-                        onReset: _resetSimulation,
-                      ),
-                      const SizedBox(height: 16),
-                      SimulationStatusPanel(
-                        simulator: simulator,
-                        isRunning: isRunning,
-                      ),
-                    ],
+                  SimulationControlPanel(
+                    isRunning: isRunning,
+                    onStart: _startSimulation,
+                    onStop: _stopSimulation,
+                    onReset: _resetSimulation,
+                    selectedControllerIndex: _selectedControllerIndex,
+                    onControllerChanged: (index) {
+                      setState(() {
+                        _selectedControllerIndex = index;
+                        simulator.setStrEnabled(index == 1);
+                      });
+                    },
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // === 残差チャート（1/2幅）＋ 推定パラメータチャート（1/2幅） ===
+              // === 残差チャート（1/3幅）＋ 推定パラメータチャート（1/3幅）＋ 状態（1/3幅） ===
               ResponsiveSplitRow(
-                flex: const [1, 1],
+                flex: const [1, 1, 1],
                 children: [
                   ResidualPlot(
                     residual: simulator.historyResidual,
@@ -252,6 +262,10 @@ class _MainScreenState extends State<MainScreen> {
                     actualB1: simulator.historyActualB1,
                     actualB2: simulator.historyActualB2,
                   ),
+                  SimulationStatusPanel(
+                    simulator: simulator,
+                    isRunning: isRunning,
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -259,41 +273,12 @@ class _MainScreenState extends State<MainScreen> {
               // === 設定カード群（画面幅に応じて1〜3カラムのレスポンシブ配置） ===
               ResponsiveCardGrid(
                 children: [
-                  // 目標値調整
-                  TargetValuePanel(
-                    simulator: simulator,
-                    onChanged: (value) {
-                      setState(() {
-                        simulator.targetValue = value;
-                      });
-                    },
-                  ),
-
-                  // コントローラー選択タブ + 設定画面
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      ControllerSelectorPanel(
-                        selectedControllerIndex: _selectedControllerIndex,
-                        onChanged: (index) {
-                          setState(() {
-                            _selectedControllerIndex = index;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildControllerScreen(),
-                    ],
-                  ),
+                  // コントローラー設定画面（PID/STR）
+                  _buildControllerScreen(),
 
                   // プラントパラメータ調整
                   PlantParamsPanel(
                     simulator: simulator,
-                    onPlantOrderChanged: (useSecondOrder) {
-                      setState(() {
-                        simulator.setPlantOrder(useSecondOrder: useSecondOrder);
-                      });
-                    },
                     onParamAChanged: (value) {
                       setState(() {
                         simulator.plantParamA = value;
@@ -302,26 +287,6 @@ class _MainScreenState extends State<MainScreen> {
                     onParamBChanged: (value) {
                       setState(() {
                         simulator.plantParamB = value;
-                      });
-                    },
-                    onParamA1Changed: (value) {
-                      setState(() {
-                        simulator.plantParamA1 = value;
-                      });
-                    },
-                    onParamA2Changed: (value) {
-                      setState(() {
-                        simulator.plantParamA2 = value;
-                      });
-                    },
-                    onParamB1Changed: (value) {
-                      setState(() {
-                        simulator.plantParamB1 = value;
-                      });
-                    },
-                    onParamB2Changed: (value) {
-                      setState(() {
-                        simulator.plantParamB2 = value;
                       });
                     },
                   ),

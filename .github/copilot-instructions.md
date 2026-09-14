@@ -41,18 +41,17 @@ ui/              → Flutter widgets (main_screen, plot)
 - `DisturbanceType`: none | step | impulse | sinusoid | noise
 - Applied in `Simulator.step()`: `plant.step(_controlInput + disturbance.next())`
 
-**Disturbance Presets** (v2.0+): `DisturbancePreset` class with 12 predefined scenarios:
+**Disturbance Presets**: `DisturbancePreset` class with 7 predefined scenarios (kept intentionally small — see #73):
 - **none**: No disturbance (baseline testing)
-- **step_early/mid/large**: Step disturbances at different timings (10/100 steps) and amplitudes (0.2/0.5)
-- **impulse_small/large**: Single impulse disturbances (amplitude 0.3/1.0 at step 50/100)
-- **sinusoid_slow/mid/fast**: Sinusoidal disturbances (omega 0.05/0.2/0.5 rad/step, amplitude 0.15–0.2)
-- **noise_small/mid/large**: Gaussian noise (stddev 0.03/0.05/0.1, seed 42 for reproducibility)
+- **step_small/large**: Step disturbances at step 50, amplitudes 0.2/0.5
+- **sinusoid_slow/fast**: Sinusoidal disturbances (omega 0.05/0.5 rad/step, amplitude 0.2/0.15)
+- **noise_small/large**: Gaussian noise (stddev 0.03/0.1, seed 42 for reproducibility)
 
 Usage:
 ```dart
 // Apply preset
-sim.applyDisturbancePreset('noise_mid');  // Uses preset parameters
-List<DisturbancePreset> presets = Simulator.getAvailablePresets();  // Get all 12 presets
+sim.applyDisturbancePreset('noise_small');  // Uses preset parameters
+List<DisturbancePreset> presets = Simulator.getAvailablePresets();  // Get all 7 presets
 
 // Custom disturbance (overrides preset)
 sim.setDisturbanceType(DisturbanceType.sinusoid);  // Resets to default params

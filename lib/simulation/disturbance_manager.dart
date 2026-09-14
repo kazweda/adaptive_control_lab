@@ -93,6 +93,9 @@ class DisturbanceManager {
   }
 
   /// プリセット一覧を取得
+  ///
+  /// なし・ステップ・正弦波・ノイズの代表的なパターンを、強さ違いで数個ずつ用意する。
+  /// （インパルス外乱や中間の強さのプリセットは選択肢を絞るため割愛）
   static List<DisturbancePreset> getAvailablePresets() {
     return [
       DisturbancePreset(
@@ -101,39 +104,18 @@ class DisturbanceManager {
         type: DisturbanceType.none,
       ),
       DisturbancePreset(
-        name: 'step_early',
-        displayName: 'ステップ外乱（早期）',
+        name: 'step_small',
+        displayName: 'ステップ外乱（小）',
         type: DisturbanceType.step,
         amplitude: 0.2,
-        startStep: 10,
-      ),
-      DisturbancePreset(
-        name: 'step_mid',
-        displayName: 'ステップ外乱（中期）',
-        type: DisturbanceType.step,
-        amplitude: 0.2,
-        startStep: 100,
-      ),
-      DisturbancePreset(
-        name: 'step_large',
-        displayName: 'ステップ外乱（大信号）',
-        type: DisturbanceType.step,
-        amplitude: 0.5,
-        startStep: 100,
-      ),
-      DisturbancePreset(
-        name: 'impulse_small',
-        displayName: 'インパルス外乱（小）',
-        type: DisturbanceType.impulse,
-        amplitude: 0.3,
         startStep: 50,
       ),
       DisturbancePreset(
-        name: 'impulse_large',
-        displayName: 'インパルス外乱（大）',
-        type: DisturbanceType.impulse,
-        amplitude: 1.0,
-        startStep: 100,
+        name: 'step_large',
+        displayName: 'ステップ外乱（大）',
+        type: DisturbanceType.step,
+        amplitude: 0.5,
+        startStep: 50,
       ),
       DisturbancePreset(
         name: 'sinusoid_slow',
@@ -141,14 +123,6 @@ class DisturbanceManager {
         type: DisturbanceType.sinusoid,
         amplitude: 0.2,
         omega: 0.05,
-        phase: 0.0,
-      ),
-      DisturbancePreset(
-        name: 'sinusoid_mid',
-        displayName: '正弦波（中周波）',
-        type: DisturbanceType.sinusoid,
-        amplitude: 0.2,
-        omega: 0.2,
         phase: 0.0,
       ),
       DisturbancePreset(
@@ -164,13 +138,6 @@ class DisturbanceManager {
         displayName: 'ガウス雑音（小）',
         type: DisturbanceType.noise,
         noiseStdDev: 0.03,
-        noiseSeed: 42,
-      ),
-      DisturbancePreset(
-        name: 'noise_mid',
-        displayName: 'ガウス雑音（中）',
-        type: DisturbanceType.noise,
-        noiseStdDev: 0.05,
         noiseSeed: 42,
       ),
       DisturbancePreset(

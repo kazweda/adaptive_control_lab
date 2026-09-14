@@ -114,7 +114,7 @@ void main() {
       simulator = Simulator();
     });
 
-    testWidgets('STR有効化トグルが表示される', (WidgetTester tester) async {
+    testWidgets('応答特性の調整セクションが表示される', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -123,14 +123,13 @@ void main() {
         ),
       );
 
-      // STR制御器トグルテキストが表示される
-      expect(find.text('STR制御器'), findsOneWidget);
-      // Switchが表示されている
-      expect(find.byType(Switch), findsOneWidget);
+      // プリセットカードのタイトルが表示される
+      expect(find.text('応答特性の調整'), findsOneWidget);
+      // 詳細設定カードのタイトルが表示される
+      expect(find.text('詳細設定（極を個別に調整）'), findsOneWidget);
     });
 
-    testWidgets('STR有効時に極スライダーが表示される', (WidgetTester tester) async {
-      simulator.setStrEnabled(true);
+    testWidgets('極プリセットと詳細設定の極スライダーが表示される', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -146,9 +145,7 @@ void main() {
       expect(find.text('安定重視'), findsOneWidget);
       expect(find.text('速応答'), findsOneWidget);
 
-      // 詳細設定を開くと主極スライダーラベルが表示される
-      await tester.tap(find.text('詳細設定（極を個別に調整）'));
-      await tester.pumpAndSettle();
+      // 詳細設定カードは常時表示されており、主極スライダーラベルが見える
       expect(find.text('主極（極1）'), findsOneWidget);
     });
   });
