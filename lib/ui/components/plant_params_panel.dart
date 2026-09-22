@@ -64,7 +64,7 @@ class PlantParamsPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'プラント設定（自動制御される対象）',
+              'プラント設定（制御対象）',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),

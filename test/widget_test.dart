@@ -73,7 +73,7 @@ void main() {
 
     // 各セクションの確認
     expect(find.text('PID ゲイン調整'), findsOneWidget);
-    expect(find.text('プラント設定（自動制御される対象）'), findsOneWidget);
+    expect(find.text('プラント設定（制御対象）'), findsOneWidget);
 
     // 目標値は状態カードに固定値として表示される（設定用スライダーは削除済み）
     expect(find.text('目標値：'), findsOneWidget);

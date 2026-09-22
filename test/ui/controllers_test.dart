@@ -32,19 +32,15 @@ void main() {
       expect(find.text('おだやか'), findsOneWidget);
       expect(find.text('きびきび'), findsOneWidget);
 
-      // 詳細設定を開くとスライダーが表示される
-      await tester.tap(find.text('詳細設定（個別に調整）'));
-      await tester.pumpAndSettle();
+      // PID詳細設定カードのタイトルが表示される
+      expect(find.text('PID 詳細設定（個別に調整）'), findsOneWidget);
 
       // 各ゲインのラベルが表示される
       expect(find.text('Kp（比例）'), findsOneWidget);
       expect(find.text('Ki（積分）'), findsOneWidget);
       expect(find.text('Kd（微分）'), findsOneWidget);
 
-      // 説明文が表示される
-      expect(find.text('素早く反応する程度'), findsOneWidget);
-      expect(find.text('ズレを直す強さ'), findsOneWidget);
-      expect(find.text('揺れを抑える程度'), findsOneWidget);
+      // ゲインの説明文はWiki（PID-Tuning-Guide）に移設済みのため、UI上には表示されない
 
       // スライダーが3つ表示される
       expect(find.byType(Slider), findsNWidgets(3));
@@ -66,10 +62,6 @@ void main() {
           ),
         ),
       );
-
-      // 詳細設定を開いてスライダーを表示させる
-      await tester.tap(find.text('詳細設定（個別に調整）'));
-      await tester.pumpAndSettle();
 
       // Kpスライダーを操作（最初のSlider）
       await tester.drag(find.byType(Slider).first, const Offset(100, 0));
@@ -96,11 +88,7 @@ void main() {
         ),
       );
 
-      // 詳細設定を開いてスライダーの値表示を確認する
-      await tester.tap(find.text('詳細設定（個別に調整）'));
-      await tester.pumpAndSettle();
-
-      // 初期値のテキストが表示される（各ゲインで2箇所ずつ表示される：ラベル横と説明下）
+      // 初期値のテキストが表示される（ラベル横の値表示）
       expect(find.text(initialKp.toStringAsFixed(3)), findsAtLeast(1));
       expect(find.text(initialKi.toStringAsFixed(3)), findsAtLeast(1));
       expect(find.text(initialKd.toStringAsFixed(3)), findsAtLeast(1));

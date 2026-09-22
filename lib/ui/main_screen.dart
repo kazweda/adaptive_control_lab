@@ -13,6 +13,7 @@ import 'components/responsive_card_grid.dart';
 import 'components/responsive_split_row.dart';
 import 'dart:async';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// メイン画面UI
 class MainScreen extends StatefulWidget {
@@ -30,6 +31,18 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedControllerIndex = 0; // 0: PID, 1: STR
   String _appVersion = '1.0.0+1'; // アプリケーションバージョン
   double _scrollPosition = 0.0; // 共通スクロール位置（3つのプロット同期用）
+
+  // Wiki（Help）ページへのリンク
+  static const String _wikiUrl =
+      'https://github.com/kazweda/adaptive_control_lab/wiki';
+
+  /// Wikiページをブラウザで開く
+  Future<void> _openWiki() async {
+    final uri = Uri.parse(_wikiUrl);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      debugPrint('Failed to launch $_wikiUrl');
+    }
+  }
 
   @override
   void initState() {
@@ -159,8 +172,13 @@ class _MainScreenState extends State<MainScreen> {
         centerTitle: true,
         elevation: 2,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'ヘルプ（Wiki）',
+            onPressed: _openWiki,
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.only(right: 16.0),
             child: Center(
               child: Text(
                 'v$_appVersion',
@@ -276,29 +294,33 @@ class _MainScreenState extends State<MainScreen> {
                   // コントローラー設定画面（PID/STR）
                   _buildControllerScreen(),
 
-                  // プラントパラメータ調整
-                  PlantParamsPanel(
-                    simulator: simulator,
-                    onParamAChanged: (value) {
-                      setState(() {
-                        simulator.plantParamA = value;
-                      });
-                    },
-                    onParamBChanged: (value) {
-                      setState(() {
-                        simulator.plantParamB = value;
-                      });
-                    },
-                  ),
-
-                  // 外乱設定
-                  DisturbancePanel(
-                    simulator: simulator,
-                    onPresetApplied: (presetName) {
-                      setState(() {
-                        simulator.applyDisturbancePreset(presetName);
-                      });
-                    },
+                  // プラント設定（制御対象・外乱設定を同じグループにまとめる）
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PlantParamsPanel(
+                        simulator: simulator,
+                        onParamAChanged: (value) {
+                          setState(() {
+                            simulator.plantParamA = value;
+                          });
+                        },
+                        onParamBChanged: (value) {
+                          setState(() {
+                            simulator.plantParamB = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DisturbancePanel(
+                        simulator: simulator,
+                        onPresetApplied: (presetName) {
+                          setState(() {
+                            simulator.applyDisturbancePreset(presetName);
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
