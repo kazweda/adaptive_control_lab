@@ -422,6 +422,8 @@ PR を作成する前に、以下を確認してください。
 - [ ] コードはフォーマット済み (`dart format`)
 - [ ] コミットメッセージは規約に従っている
 - [ ] Issue番号を記載（`Implements #XX` または `Closes #XX`）
+- [ ] `pubspec.yaml` のバージョンを上げた場合は `CHANGELOG.md` にも変更点を追記し、
+      マージ後に `git tag -a vX.Y.Z+B` を作成してpushする
 
 ### PR テンプレート
 
