@@ -17,6 +17,14 @@ class STRControllerScreen extends StatefulWidget {
 }
 
 class _STRControllerScreenState extends State<STRControllerScreen> {
+  // PIDゲイン調整のプリセットボタンに合わせた幅制約
+  static const double _minButtonWidth = 88.0;
+  static const double _maxButtonWidth = 140.0;
+
+  // カード間の高さを揃えるための最小高さ（PIDControllerScreenと同じ基準）
+  static const double _presetCardMinHeight = 170.0;
+  static const double _detailCardMinHeight = 260.0;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -32,18 +40,21 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
   /// プリセット選択カード
   Widget _buildPresetCard() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '応答特性の調整',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildPresetSelector(),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _presetCardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '応答特性の調整',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _buildPresetSelector(),
+            ],
+          ),
         ),
       ),
     );
@@ -52,75 +63,78 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
   /// 詳細設定カード（極を個別に調整）
   Widget _buildDetailCard() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '詳細設定（極を個別に調整）',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            // 1次・2次共通: targetPole1
-            _buildPoleSlider(
-              label: '主極（極1）',
-              value: widget.simulator.strTargetPole1,
-              onChanged: (value) {
-                widget.simulator.setStrTargetPoles(
-                  value,
-                  widget.simulator.strTargetPole2,
-                );
-                widget.onUpdate();
-              },
-              description: '小さいほど速く減衰（0 < p < 1）',
-            ),
-            const SizedBox(height: 16),
-
-            // 2次系のみ表示
-            if (widget.simulator.isSecondOrderPlant)
-              Column(
-                children: [
-                  _buildPoleSlider(
-                    label: '補助極（極2）',
-                    value: widget.simulator.strTargetPole2,
-                    onChanged: (value) {
-                      widget.simulator.setStrTargetPoles(
-                        widget.simulator.strTargetPole1,
-                        value,
-                      );
-                      widget.onUpdate();
-                    },
-                    description: '2次プラント用の補助極',
-                  ),
-                  const SizedBox(height: 16),
-                ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _detailCardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '詳細設定（極を個別に調整）',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 12),
 
-            // Butterworth配置ボタン（2次系のみ）
-            if (widget.simulator.isSecondOrderPlant)
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    widget.simulator.str?.setTargetPolesButterworth(0.3);
-                    // STR オブジェクトの極を Simulator のプロパティに同期
-                    if (widget.simulator.str != null) {
-                      widget.simulator.setStrTargetPoles(
-                        widget.simulator.str!.targetPole1,
-                        widget.simulator.str!.targetPole2,
-                      );
-                    }
-                    widget.onUpdate();
-                  });
+              // 1次・2次共通: targetPole1
+              _buildPoleSlider(
+                label: '主極（極1）',
+                value: widget.simulator.strTargetPole1,
+                onChanged: (value) {
+                  widget.simulator.setStrTargetPoles(
+                    value,
+                    widget.simulator.strTargetPole2,
+                  );
+                  widget.onUpdate();
                 },
-                icon: const Icon(Icons.tune),
-                label: const Text('Butterworth配置（推奨）'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[300],
-                ),
+                description: '小さいほど速く減衰（0 < p < 1）',
               ),
-          ],
+              const SizedBox(height: 16),
+
+              // 2次系のみ表示
+              if (widget.simulator.isSecondOrderPlant)
+                Column(
+                  children: [
+                    _buildPoleSlider(
+                      label: '補助極（極2）',
+                      value: widget.simulator.strTargetPole2,
+                      onChanged: (value) {
+                        widget.simulator.setStrTargetPoles(
+                          widget.simulator.strTargetPole1,
+                          value,
+                        );
+                        widget.onUpdate();
+                      },
+                      description: '2次プラント用の補助極',
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+
+              // Butterworth配置ボタン（2次系のみ）
+              if (widget.simulator.isSecondOrderPlant)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      widget.simulator.str?.setTargetPolesButterworth(0.3);
+                      // STR オブジェクトの極を Simulator のプロパティに同期
+                      if (widget.simulator.str != null) {
+                        widget.simulator.setStrTargetPoles(
+                          widget.simulator.str!.targetPole1,
+                          widget.simulator.str!.targetPole2,
+                        );
+                      }
+                      widget.onUpdate();
+                    });
+                  },
+                  icon: const Icon(Icons.tune),
+                  label: const Text('Butterworth配置（推奨）'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[300],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -163,33 +177,30 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
           runSpacing: 8,
           children: presets.map((preset) {
             final isActive = currentName == preset.displayName;
-            return ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isActive ? Colors.blue : Colors.grey[300],
-                foregroundColor: isActive ? Colors.white : Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+            return ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: _minButtonWidth,
+                maxWidth: _maxButtonWidth,
               ),
-              onPressed: () {
-                setState(() {
-                  widget.simulator.applyStrPreset(preset.name);
-                  widget.onUpdate();
-                });
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    preset.displayName,
-                    style: const TextStyle(fontSize: 12),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+                  foregroundColor: isActive ? Colors.white : Colors.black,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  Text(
-                    preset.description,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ],
+                ),
+                onPressed: () {
+                  setState(() {
+                    widget.simulator.applyStrPreset(preset.name);
+                    widget.onUpdate();
+                  });
+                },
+                child: Text(
+                  preset.displayName,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             );
           }).toList(),

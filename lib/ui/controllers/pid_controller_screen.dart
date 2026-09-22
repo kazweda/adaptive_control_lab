@@ -17,6 +17,14 @@ class PIDControllerScreen extends StatefulWidget {
 }
 
 class _PIDControllerScreenState extends State<PIDControllerScreen> {
+  // 操作パネルのボタンに合わせたプリセットボタンの幅制約
+  static const double _minButtonWidth = 88.0;
+  static const double _maxButtonWidth = 140.0;
+
+  // カード間の高さを揃えるための最小高さ（他の設定カードとの見た目のバランス用）
+  static const double _presetCardMinHeight = 170.0;
+  static const double _detailCardMinHeight = 260.0;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -32,18 +40,21 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
   /// プリセット選択カード
   Widget _buildPresetCard() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'PID ゲイン調整',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildPresetSelector(),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _presetCardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'PID ゲイン調整',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _buildPresetSelector(),
+            ],
+          ),
         ),
       ),
     );
@@ -52,55 +63,55 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
   /// 詳細設定カード（ゲインを個別に調整）
   Widget _buildDetailCard() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '詳細設定（個別に調整）',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _detailCardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'PID 詳細設定（個別に調整）',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
 
-            // Kp（比例ゲイン）
-            _buildGainSlider(
-              label: 'Kp（比例）',
-              value: widget.simulator.pidKp,
-              onChanged: (value) {
-                widget.simulator.pidKp = value;
-                widget.onUpdate();
-              },
-              description: '素早く反応する程度',
-              max: 1.5,
-            ),
-            const SizedBox(height: 16),
+              // Kp（比例ゲイン）
+              _buildGainSlider(
+                label: 'Kp（比例）',
+                value: widget.simulator.pidKp,
+                onChanged: (value) {
+                  widget.simulator.pidKp = value;
+                  widget.onUpdate();
+                },
+                max: 1.5,
+              ),
+              const SizedBox(height: 8),
 
-            // Ki（積分ゲイン）
-            _buildGainSlider(
-              label: 'Ki（積分）',
-              value: widget.simulator.pidKi,
-              onChanged: (value) {
-                widget.simulator.pidKi = value;
-                widget.onUpdate();
-              },
-              description: 'ズレを直す強さ',
-              max: 1.0,
-            ),
-            const SizedBox(height: 16),
+              // Ki（積分ゲイン）
+              _buildGainSlider(
+                label: 'Ki（積分）',
+                value: widget.simulator.pidKi,
+                onChanged: (value) {
+                  widget.simulator.pidKi = value;
+                  widget.onUpdate();
+                },
+                max: 1.0,
+              ),
+              const SizedBox(height: 8),
 
-            // Kd（微分ゲイン）
-            _buildGainSlider(
-              label: 'Kd（微分）',
-              value: widget.simulator.pidKd,
-              onChanged: (value) {
-                widget.simulator.pidKd = value;
-                widget.onUpdate();
-              },
-              description: '揺れを抑える程度',
-              max: 1.0,
-            ),
-          ],
+              // Kd（微分ゲイン）
+              _buildGainSlider(
+                label: 'Kd（微分）',
+                value: widget.simulator.pidKd,
+                onChanged: (value) {
+                  widget.simulator.pidKd = value;
+                  widget.onUpdate();
+                },
+                max: 1.0,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -143,33 +154,30 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
           runSpacing: 8,
           children: presets.map((preset) {
             final isActive = currentName == preset.displayName;
-            return ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isActive ? Colors.blue : Colors.grey[300],
-                foregroundColor: isActive ? Colors.white : Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+            return ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: _minButtonWidth,
+                maxWidth: _maxButtonWidth,
               ),
-              onPressed: () {
-                setState(() {
-                  widget.simulator.applyPidPreset(preset.name);
-                  widget.onUpdate();
-                });
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    preset.displayName,
-                    style: const TextStyle(fontSize: 12),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+                  foregroundColor: isActive ? Colors.white : Colors.black,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  Text(
-                    preset.description,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ],
+                ),
+                onPressed: () {
+                  setState(() {
+                    widget.simulator.applyPidPreset(preset.name);
+                    widget.onUpdate();
+                  });
+                },
+                child: Text(
+                  preset.displayName,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             );
           }).toList(),
@@ -180,11 +188,11 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
   }
 
   /// ゲインスライダーのヘルパーウィジェット
+  /// （各ゲインの意味はWiki「PID Tuning Guide」を参照）
   Widget _buildGainSlider({
     required String label,
     required double value,
     required ValueChanged<double> onChanged,
-    required String description,
     double max = 1.0,
   }) {
     return Column(
@@ -203,12 +211,6 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          description,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
         Slider(
           value: value,
           min: 0.0,
