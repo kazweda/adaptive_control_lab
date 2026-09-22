@@ -17,11 +17,12 @@ class PlantParamsPanel extends StatelessWidget {
   // カード間の高さを揃えるための最小高さ（他の設定カードとの見た目のバランス用）
   static const double _cardMinHeight = 220.0;
 
+  /// スライダーのヘルパーウィジェット
+  /// （a・bパラメータの意味はWiki「Plant-Settings-Guide」を参照）
   Widget _buildPlantParamSlider({
     required String label,
     required double value,
     required ValueChanged<double> onChanged,
-    required String description,
     double min = 0.0,
     double max = 1.0,
   }) {
@@ -41,12 +42,6 @@ class PlantParamsPanel extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          description,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
         Slider(
           value: value,
           min: min,
@@ -77,14 +72,12 @@ class PlantParamsPanel extends StatelessWidget {
                 label: '慣性の強さ (a)',
                 value: simulator.plantParamA,
                 onChanged: onParamAChanged,
-                description: '大きいほど前の値が強く影響',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               _buildPlantParamSlider(
                 label: '応答の敏感さ (b)',
                 value: simulator.plantParamB,
                 onChanged: onParamBChanged,
-                description: '大きいほど入力に敏感に反応',
               ),
             ],
           ),
