@@ -12,76 +12,84 @@ class DisturbancePanel extends StatelessWidget {
     required this.onPresetApplied,
   });
 
+  // カード間の高さを揃えるための最小高さ（PlantParamsPanelと同じ基準）
+  static const double _cardMinHeight = 220.0;
+
   @override
   Widget build(BuildContext context) {
     final presets = Simulator.getAvailablePresets();
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'プラント設定（外乱設定）',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            // 現在のプリセット表示
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'プリセット',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _cardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'プラント設定（外乱設定）',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              // 現在のプリセット表示
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'プリセット',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    simulator.currentPresetName,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // プリセットボタングリッド
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: presets.map((preset) {
-                final isActive =
-                    simulator.currentPresetName == preset.displayName;
-                return ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isActive ? Colors.blue : Colors.grey[300],
-                    foregroundColor: isActive ? Colors.white : Colors.black,
+                  Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      simulator.currentPresetName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                  onPressed: () {
-                    onPresetApplied(preset.name);
-                  },
-                  child: Text(
-                    preset.displayName,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              // プリセットボタングリッド
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: presets.map((preset) {
+                  final isActive =
+                      simulator.currentPresetName == preset.displayName;
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isActive
+                          ? Colors.blue
+                          : Colors.grey[300],
+                      foregroundColor: isActive ? Colors.white : Colors.black,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    onPressed: () {
+                      onPresetApplied(preset.name);
+                    },
+                    child: Text(
+                      preset.displayName,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -14,6 +14,9 @@ class PlantParamsPanel extends StatelessWidget {
     required this.onParamBChanged,
   });
 
+  // カード間の高さを揃えるための最小高さ（他の設定カードとの見た目のバランス用）
+  static const double _cardMinHeight = 220.0;
+
   Widget _buildPlantParamSlider({
     required String label,
     required double value,
@@ -58,30 +61,33 @@ class PlantParamsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'プラント設定（制御対象）',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildPlantParamSlider(
-              label: '慣性の強さ (a)',
-              value: simulator.plantParamA,
-              onChanged: onParamAChanged,
-              description: '大きいほど前の値が強く影響',
-            ),
-            const SizedBox(height: 16),
-            _buildPlantParamSlider(
-              label: '応答の敏感さ (b)',
-              value: simulator.plantParamB,
-              onChanged: onParamBChanged,
-              description: '大きいほど入力に敏感に反応',
-            ),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _cardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'プラント設定（制御対象）',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _buildPlantParamSlider(
+                label: '慣性の強さ (a)',
+                value: simulator.plantParamA,
+                onChanged: onParamAChanged,
+                description: '大きいほど前の値が強く影響',
+              ),
+              const SizedBox(height: 16),
+              _buildPlantParamSlider(
+                label: '応答の敏感さ (b)',
+                value: simulator.plantParamB,
+                onChanged: onParamBChanged,
+                description: '大きいほど入力に敏感に反応',
+              ),
+            ],
+          ),
         ),
       ),
     );

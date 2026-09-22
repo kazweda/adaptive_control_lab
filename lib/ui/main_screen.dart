@@ -134,30 +134,6 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  /// コントローラー設定画面（PID/STR両方を常時表示し、非選択側をグレーアウト）
-  Widget _buildControllerScreen() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildControllerCard(
-          isActive: _selectedControllerIndex == 0,
-          child: PIDControllerScreen(
-            simulator: simulator,
-            onUpdate: () => setState(() {}),
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildControllerCard(
-          isActive: _selectedControllerIndex == 1,
-          child: STRControllerScreen(
-            simulator: simulator,
-            onUpdate: () => setState(() {}),
-          ),
-        ),
-      ],
-    );
-  }
-
   /// 選択されていないコントローラーカードをグレーアウトし操作不可にする
   Widget _buildControllerCard({required bool isActive, required Widget child}) {
     if (isActive) return child;
@@ -289,10 +265,27 @@ class _MainScreenState extends State<MainScreen> {
               const SizedBox(height: 16),
 
               // === 設定カード群（画面幅に応じて1〜3カラムのレスポンシブ配置） ===
+              // PID/STR/プラントを独立したグループとして渡し、
+              // デスクトップ幅（3カラム）で列の高さがバランスするようにする
               ResponsiveCardGrid(
                 children: [
-                  // コントローラー設定画面（PID/STR）
-                  _buildControllerScreen(),
+                  // PID設定（プリセット＋詳細設定）
+                  _buildControllerCard(
+                    isActive: _selectedControllerIndex == 0,
+                    child: PIDControllerScreen(
+                      simulator: simulator,
+                      onUpdate: () => setState(() {}),
+                    ),
+                  ),
+
+                  // STR設定（プリセット＋詳細設定）
+                  _buildControllerCard(
+                    isActive: _selectedControllerIndex == 1,
+                    child: STRControllerScreen(
+                      simulator: simulator,
+                      onUpdate: () => setState(() {}),
+                    ),
+                  ),
 
                   // プラント設定（制御対象・外乱設定を同じグループにまとめる）
                   Column(

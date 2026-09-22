@@ -21,6 +21,10 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
   static const double _minButtonWidth = 88.0;
   static const double _maxButtonWidth = 140.0;
 
+  // カード間の高さを揃えるための最小高さ（他の設定カードとの見た目のバランス用）
+  static const double _presetCardMinHeight = 170.0;
+  static const double _detailCardMinHeight = 260.0;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -36,18 +40,21 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
   /// プリセット選択カード
   Widget _buildPresetCard() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'PID ゲイン調整',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildPresetSelector(),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _presetCardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'PID ゲイン調整',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _buildPresetSelector(),
+            ],
+          ),
         ),
       ),
     );
@@ -56,52 +63,55 @@ class _PIDControllerScreenState extends State<PIDControllerScreen> {
   /// 詳細設定カード（ゲインを個別に調整）
   Widget _buildDetailCard() {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'PID 詳細設定（個別に調整）',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _detailCardMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'PID 詳細設定（個別に調整）',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
 
-            // Kp（比例ゲイン）
-            _buildGainSlider(
-              label: 'Kp（比例）',
-              value: widget.simulator.pidKp,
-              onChanged: (value) {
-                widget.simulator.pidKp = value;
-                widget.onUpdate();
-              },
-              max: 1.5,
-            ),
-            const SizedBox(height: 8),
+              // Kp（比例ゲイン）
+              _buildGainSlider(
+                label: 'Kp（比例）',
+                value: widget.simulator.pidKp,
+                onChanged: (value) {
+                  widget.simulator.pidKp = value;
+                  widget.onUpdate();
+                },
+                max: 1.5,
+              ),
+              const SizedBox(height: 8),
 
-            // Ki（積分ゲイン）
-            _buildGainSlider(
-              label: 'Ki（積分）',
-              value: widget.simulator.pidKi,
-              onChanged: (value) {
-                widget.simulator.pidKi = value;
-                widget.onUpdate();
-              },
-              max: 1.0,
-            ),
-            const SizedBox(height: 8),
+              // Ki（積分ゲイン）
+              _buildGainSlider(
+                label: 'Ki（積分）',
+                value: widget.simulator.pidKi,
+                onChanged: (value) {
+                  widget.simulator.pidKi = value;
+                  widget.onUpdate();
+                },
+                max: 1.0,
+              ),
+              const SizedBox(height: 8),
 
-            // Kd（微分ゲイン）
-            _buildGainSlider(
-              label: 'Kd（微分）',
-              value: widget.simulator.pidKd,
-              onChanged: (value) {
-                widget.simulator.pidKd = value;
-                widget.onUpdate();
-              },
-              max: 1.0,
-            ),
-          ],
+              // Kd（微分ゲイン）
+              _buildGainSlider(
+                label: 'Kd（微分）',
+                value: widget.simulator.pidKd,
+                onChanged: (value) {
+                  widget.simulator.pidKd = value;
+                  widget.onUpdate();
+                },
+                max: 1.0,
+              ),
+            ],
+          ),
         ),
       ),
     );
