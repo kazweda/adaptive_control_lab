@@ -17,6 +17,10 @@ class STRControllerScreen extends StatefulWidget {
 }
 
 class _STRControllerScreenState extends State<STRControllerScreen> {
+  // PIDゲイン調整のプリセットボタンに合わせた幅制約
+  static const double _minButtonWidth = 88.0;
+  static const double _maxButtonWidth = 140.0;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -163,33 +167,30 @@ class _STRControllerScreenState extends State<STRControllerScreen> {
           runSpacing: 8,
           children: presets.map((preset) {
             final isActive = currentName == preset.displayName;
-            return ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isActive ? Colors.blue : Colors.grey[300],
-                foregroundColor: isActive ? Colors.white : Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+            return ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: _minButtonWidth,
+                maxWidth: _maxButtonWidth,
               ),
-              onPressed: () {
-                setState(() {
-                  widget.simulator.applyStrPreset(preset.name);
-                  widget.onUpdate();
-                });
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    preset.displayName,
-                    style: const TextStyle(fontSize: 12),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isActive ? Colors.blue : Colors.grey[300],
+                  foregroundColor: isActive ? Colors.white : Colors.black,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  Text(
-                    preset.description,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ],
+                ),
+                onPressed: () {
+                  setState(() {
+                    widget.simulator.applyStrPreset(preset.name);
+                    widget.onUpdate();
+                  });
+                },
+                child: Text(
+                  preset.displayName,
+                  style: const TextStyle(fontSize: 12),
+                ),
               ),
             );
           }).toList(),
