@@ -93,30 +93,27 @@ void main() {
     // 初期選択は「標準」(200)
     final segmentedButton = find.byKey(const Key('chartWindowSegmentedButton'));
     expect(segmentedButton, findsOneWidget);
-    expect(
-      tester.widget<SegmentedButton<int>>(segmentedButton).selected,
-      {200},
-    );
+    expect(tester.widget<SegmentedButton<int>>(segmentedButton).selected, {
+      200,
+    });
 
     // 「全体」(500)をワンタップで選択
     await tester.tap(
       find.descendant(of: segmentedButton, matching: find.text('全体')),
     );
     await tester.pump();
-    expect(
-      tester.widget<SegmentedButton<int>>(segmentedButton).selected,
-      {500},
-    );
+    expect(tester.widget<SegmentedButton<int>>(segmentedButton).selected, {
+      500,
+    });
 
     // 「標準」(200)にワンタップで戻せる
     await tester.tap(
       find.descendant(of: segmentedButton, matching: find.text('標準')),
     );
     await tester.pump();
-    expect(
-      tester.widget<SegmentedButton<int>>(segmentedButton).selected,
-      {200},
-    );
+    expect(tester.widget<SegmentedButton<int>>(segmentedButton).selected, {
+      200,
+    });
   });
 
   testWidgets('コントローラー選択タブでPID/STRの有効表示が切り替わる', (WidgetTester tester) async {

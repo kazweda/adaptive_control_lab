@@ -87,10 +87,7 @@ class _MainScreenState extends State<MainScreen> {
       if (simulator.isHalted) {
         simulationTimer?.cancel();
         final dataLength = simulator.historyTarget.length;
-        final maxScrollIndex = (dataLength - _chartWindow).clamp(
-          0,
-          dataLength,
-        );
+        final maxScrollIndex = (dataLength - _chartWindow).clamp(0, dataLength);
         setState(() {
           isRunning = false;
           _scrollPosition = maxScrollIndex.toDouble();
@@ -110,10 +107,7 @@ class _MainScreenState extends State<MainScreen> {
       isRunning = false;
       // 停止時に最新データが見える位置に初期化
       final dataLength = simulator.historyTarget.length;
-      final maxScrollIndex = (dataLength - _chartWindow).clamp(
-        0,
-        dataLength,
-      );
+      final maxScrollIndex = (dataLength - _chartWindow).clamp(0, dataLength);
       _scrollPosition = maxScrollIndex.toDouble();
     });
   }
