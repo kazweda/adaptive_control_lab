@@ -63,6 +63,18 @@ class Simulator {
     _distMgr = DisturbanceManager();
     _historyMgr = HistoryManager(maxLength: maxHistoryLength);
     _strMgr = StrManager(useSecondOrderPlant: _useSecondOrderPlant);
+    _recordInitialState();
+  }
+
+  /// 制御開始前の初期状態（k=0）を履歴の先頭に記録する
+  ///
+  /// stepCountは0のまま変更しない（maxStepsによる打ち切り判定に影響しないため）。
+  void _recordInitialState() {
+    _historyMgr.addStep(
+      targetValue: targetValue,
+      outputValue: plant.output,
+      controlValue: 0.0,
+    );
   }
 
   // === ゲッター ===
@@ -486,6 +498,7 @@ class Simulator {
     _halted = false;
     stepCount = 0;
     _historyMgr.clearAll();
+    _recordInitialState();
   }
 
   /// RLS有効化/無効化（UIからの切替）

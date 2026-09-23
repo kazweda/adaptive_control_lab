@@ -97,13 +97,13 @@ void main() {
       200,
     });
 
-    // 「全体」(500)をワンタップで選択
+    // 「全体」(501)をワンタップで選択
     await tester.tap(
       find.descendant(of: segmentedButton, matching: find.text('全体')),
     );
     await tester.pump();
     expect(tester.widget<SegmentedButton<int>>(segmentedButton).selected, {
-      500,
+      501,
     });
 
     // 「標準」(200)にワンタップで戻せる

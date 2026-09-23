@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('TimeSeriesPlot', () {
-    testWidgets('常に全データ(ステップ1〜dataLength)が描画される（停止時）', (tester) async {
+    testWidgets('常に全データ(0〜dataLength-1)が描画される（停止時）', (tester) async {
       final data = List<double>.generate(10, (i) => i.toDouble());
 
       await tester.pumpWidget(
@@ -26,8 +26,8 @@ void main() {
       final chartData = lineChart.data;
 
       // チャート自体は常に全データを描画し、横スクロールで表示範囲を移動する
-      expect(chartData.minX, 1);
-      expect(chartData.maxX, 10);
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 9);
       expect(chartData.lineBarsData[0].spots.length, 10);
       expect(chartData.lineBarsData[1].spots.length, 10);
       expect(chartData.lineBarsData[2].spots.length, 10);
@@ -54,8 +54,8 @@ void main() {
       final chartData = lineChart.data;
 
       // X軸は常に全範囲、Y軸は最新3点[7,8,9]に基づいて自動スケールする
-      expect(chartData.minX, 1);
-      expect(chartData.maxX, 10);
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 9);
       expect(chartData.minY, 6); // floor(7 - 0.5)
       expect(chartData.maxY, 10); // ceil(9 + 0.5)
       expect(chartData.lineBarsData[0].spots.length, 10);
@@ -168,8 +168,8 @@ void main() {
       final chartData = lineChart.data;
 
       // データ長（5） < maxDataPoints（10）の場合、全データを表示
-      expect(chartData.minX, 1);
-      expect(chartData.maxX, 5);
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 4);
       expect(chartData.lineBarsData[0].spots.length, 5);
     });
 
@@ -194,8 +194,8 @@ void main() {
       final chartData = lineChart.data;
 
       // データ長 == maxDataPoints の場合、全データを表示
-      expect(chartData.minX, 1);
-      expect(chartData.maxX, 3);
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 2);
       expect(chartData.lineBarsData[0].spots.length, 3);
     });
 
@@ -233,8 +233,8 @@ void main() {
       var lineChart = tester.widget<LineChart>(find.byType(LineChart));
       var chartData = lineChart.data;
       expect(chartData.minY, 2); // floor(3 - 0.5)
-      expect(chartData.minX, 1);
-      expect(chartData.maxX, 5);
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 4);
 
       // データが10点に増える
       await tester.tap(find.byType(ElevatedButton));
@@ -244,8 +244,8 @@ void main() {
       lineChart = tester.widget<LineChart>(find.byType(LineChart));
       chartData = lineChart.data;
       expect(chartData.minY, 7); // floor(8 - 0.5)
-      expect(chartData.minX, 1);
-      expect(chartData.maxX, 10);
+      expect(chartData.minX, 0);
+      expect(chartData.maxX, 9);
     });
   });
 }
