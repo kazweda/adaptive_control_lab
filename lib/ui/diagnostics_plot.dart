@@ -34,8 +34,10 @@ class ResidualPlot extends StatelessWidget {
     }
 
     final dataLength = residual.length;
+    // x軸はステップ番号（1始まり）で表示するため、配列インデックス+1をxとする
     final spots = <FlSpot>[
-      for (int i = 0; i < dataLength; i++) FlSpot(i.toDouble(), residual[i]),
+      for (int i = 0; i < dataLength; i++)
+        FlSpot((i + 1).toDouble(), residual[i]),
     ];
 
     final content = Padding(
@@ -59,8 +61,8 @@ class ResidualPlot extends StatelessWidget {
               final range = RangeValuesInt(visibleStart, visibleEnd);
               return LineChart(
                 LineChartData(
-                  minX: 0,
-                  maxX: (dataLength - 1).toDouble(),
+                  minX: 1,
+                  maxX: dataLength.toDouble(),
                   minY: _minY(residual, range) - 0.1,
                   maxY: _maxY(residual, range) + 0.1,
                   gridData: FlGridData(show: true, horizontalInterval: 0.2),
@@ -267,8 +269,8 @@ class ParameterTracePlot extends StatelessWidget {
               );
               return LineChart(
                 LineChartData(
-                  minX: 0,
-                  maxX: (dataLength - 1).toDouble(),
+                  minX: 1,
+                  maxX: dataLength.toDouble(),
                   minY: series.minY - 0.1,
                   maxY: series.maxY + 0.1,
                   gridData: FlGridData(show: true, horizontalInterval: 0.2),
@@ -349,8 +351,9 @@ class ParameterTracePlot extends StatelessWidget {
     }) {
       if (data.isEmpty) return;
       final spots = <FlSpot>[];
+      // x軸はステップ番号（1始まり）で表示するため、配列インデックス+1をxとする
       for (int i = 0; i < fullLength && i < data.length; i++) {
-        spots.add(FlSpot(i.toDouble(), data[i]));
+        spots.add(FlSpot((i + 1).toDouble(), data[i]));
       }
       for (
         int i = visibleRange.start;

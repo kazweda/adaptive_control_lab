@@ -4,7 +4,6 @@ import 'controllers/pid_controller_screen.dart';
 import 'controllers/str_controller_screen.dart';
 import 'plot.dart';
 import 'diagnostics_plot.dart';
-import 'components/chart_window_selector.dart';
 import 'components/simulation_status_panel.dart';
 import 'components/simulation_control_panel.dart';
 import 'components/disturbance_panel.dart';
@@ -27,7 +26,7 @@ class _MainScreenState extends State<MainScreen> {
   late Simulator simulator;
   Timer? simulationTimer;
   bool isRunning = false;
-  int? _chartWindow = 200; // 200/500/1000/全履歴(null)
+  int _chartWindow = 200; // 200(標準) / 500(全体)
   int _selectedControllerIndex = 0; // 0: PID, 1: STR
   String _appVersion = '1.0.0+1'; // アプリケーションバージョン
   double _scrollPosition = 0.0; // 共通スクロール位置（3つのプロット同期用）
@@ -64,13 +63,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  int _effectiveChartWindow() {
-    // 停止中は _chartWindow の値を使用（デフォルト 200）
-    // 実行中に All(null) が選ばれている場合は 200 に制限
-    if (isRunning && _chartWindow == null) return 200;
-    return _chartWindow ?? 200;
-  }
-
   @override
   void dispose() {
     simulationTimer?.cancel();
@@ -95,7 +87,7 @@ class _MainScreenState extends State<MainScreen> {
       if (simulator.isHalted) {
         simulationTimer?.cancel();
         final dataLength = simulator.historyTarget.length;
-        final maxScrollIndex = (dataLength - _effectiveChartWindow()).clamp(
+        final maxScrollIndex = (dataLength - _chartWindow).clamp(
           0,
           dataLength,
         );
@@ -118,7 +110,7 @@ class _MainScreenState extends State<MainScreen> {
       isRunning = false;
       // 停止時に最新データが見える位置に初期化
       final dataLength = simulator.historyTarget.length;
-      final maxScrollIndex = (dataLength - _effectiveChartWindow()).clamp(
+      final maxScrollIndex = (dataLength - _chartWindow).clamp(
         0,
         dataLength,
       );
@@ -172,17 +164,6 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // === チャート表示ウィンドウ切替 ===
-              ChartWindowSelector(
-                chartWindow: _chartWindow,
-                onChanged: (v) {
-                  setState(() {
-                    _chartWindow = v;
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-
               // === 時系列チャート（2/3幅）＋ 制御ボタン（1/3幅） ===
               ResponsiveSplitRow(
                 flex: const [2, 1],
@@ -191,13 +172,18 @@ class _MainScreenState extends State<MainScreen> {
                     historyTarget: simulator.historyTarget,
                     historyOutput: simulator.historyOutput,
                     historyControl: simulator.historyControl,
-                    // 実行中は安全のため All 選択時でも 200 に制限
-                    maxDataPoints: _effectiveChartWindow(),
+                    maxDataPoints: _chartWindow,
                     isRunning: isRunning,
                     scrollPosition: _scrollPosition,
                     onScrollChanged: (value) {
                       setState(() {
                         _scrollPosition = value;
+                      });
+                    },
+                    chartWindow: _chartWindow,
+                    onChartWindowChanged: (v) {
+                      setState(() {
+                        _chartWindow = v;
                       });
                     },
                   ),
@@ -224,7 +210,7 @@ class _MainScreenState extends State<MainScreen> {
                 children: [
                   ResidualPlot(
                     residual: simulator.historyResidual,
-                    maxDataPoints: _effectiveChartWindow(),
+                    maxDataPoints: _chartWindow,
                     isRunning: isRunning,
                     scrollPosition: _scrollPosition,
                     onScrollChanged: (value) {
@@ -235,7 +221,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   ParameterTracePlot(
                     isSecondOrder: simulator.isSecondOrderPlant,
-                    maxDataPoints: _effectiveChartWindow(),
+                    maxDataPoints: _chartWindow,
                     isRunning: isRunning,
                     scrollPosition: _scrollPosition,
                     onScrollChanged: (value) {

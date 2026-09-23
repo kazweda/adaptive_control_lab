@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'components/horizontal_scroll_chart.dart';
+import 'components/chart_window_selector.dart';
 
 /// 時系列グラフウィジェット
 ///
@@ -20,6 +21,9 @@ class TimeSeriesPlot extends StatefulWidget {
   final ValueChanged<double>? onScrollChanged;
   // 外側にCardを付けるか（タブ内などで既にCardに包まれている場合はfalse）
   final bool showCard;
+  // 表示ズームレベル切替（標準200 / 全体500）。null の場合は切替UIを表示しない
+  final int? chartWindow;
+  final ValueChanged<int>? onChartWindowChanged;
 
   const TimeSeriesPlot({
     super.key,
@@ -31,6 +35,8 @@ class TimeSeriesPlot extends StatefulWidget {
     this.scrollPosition = 0.0,
     this.onScrollChanged,
     this.showCard = true,
+    this.chartWindow,
+    this.onChartWindowChanged,
   });
 
   @override
@@ -50,21 +56,37 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
         widget.historyTarget.length != widget.historyControl.length;
 
     if (hasEmptyData || hasInconsistentLength) {
-      final emptyState = Container(
-        height: 300,
-        alignment: Alignment.center,
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.show_chart, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'スタートボタンを押すと\nグラフが表示されます',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+      final emptyState = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.chartWindow != null && widget.onChartWindowChanged != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: ChartWindowSelector(
+                  chartWindow: widget.chartWindow!,
+                  onChanged: widget.onChartWindowChanged!,
+                ),
+              ),
             ),
-          ],
-        ),
+          Container(
+            height: 300,
+            alignment: Alignment.center,
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.show_chart, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'スタートボタンを押すと\nグラフが表示されます',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
       return widget.showCard ? Card(child: emptyState) : emptyState;
     }
@@ -76,8 +98,19 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // グラフタイトルと凡例
-          _buildLegend(),
+          // グラフタイトルと凡例、ズームレベル切替
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: _buildLegend()),
+              if (widget.chartWindow != null &&
+                  widget.onChartWindowChanged != null)
+                ChartWindowSelector(
+                  chartWindow: widget.chartWindow!,
+                  onChanged: widget.onChartWindowChanged!,
+                ),
+            ],
+          ),
           const SizedBox(height: 16),
 
           // グラフ本体（横方向にネイティブスクロール可能）
@@ -126,8 +159,9 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
 
   /// グラフデータを構築
   ///
-  /// [visibleStart]/[visibleEnd] は現在スクロールで見えている範囲（Y軸スケール計算用）。
-  /// 折れ線自体は常に全データ（0〜dataLength-1）を描画し、横スクロールで表示範囲を移動する。
+  /// [visibleStart]/[visibleEnd] は現在スクロールで見えている範囲（Y軸スケール計算用、0始まりの配列インデックス）。
+  /// 折れ線自体は常に全データ（配列インデックス0〜dataLength-1、ステップ番号1〜dataLength）を描画し、
+  /// 横スクロールで表示範囲を移動する。
   LineChartData _buildLineChartData(int visibleStart, int visibleEnd) {
     final dataLength = widget.historyTarget.length;
     final int startIndex = 0;
@@ -190,8 +224,9 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
         show: true,
         border: Border.all(color: Colors.grey[400]!),
       ),
-      minX: startIndex.toDouble(),
-      maxX: dataLength > 0 ? endIndex.toDouble() : 0,
+      // x軸はステップ番号（1始まり）で表示するため、配列インデックス+1を範囲とする
+      minX: dataLength > 0 ? 1 : 0,
+      maxX: dataLength > 0 ? dataLength.toDouble() : 0,
       minY: _calculateMinY(visibleStart, visibleEnd),
       maxY: _calculateMaxY(visibleStart, visibleEnd),
       lineBarsData: [
@@ -250,7 +285,8 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
   ) {
     final spots = <FlSpot>[];
     for (int i = startIndex; i <= endIndex; i++) {
-      final x = i.toDouble();
+      // 配列インデックスiは、i+1番目に実行されたステップの結果を表す
+      final x = (i + 1).toDouble();
       final y = data[i];
       spots.add(FlSpot(x, y));
     }

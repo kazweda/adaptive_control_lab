@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// チャート表示ウィンドウ選択パネル
+/// チャート表示ズームレベル切替（標準200ステップ / 全体500ステップをワンタップで切替）
 class ChartWindowSelector extends StatelessWidget {
-  final int? chartWindow;
-  final ValueChanged<int?> onChanged;
+  final int chartWindow;
+  final ValueChanged<int> onChanged;
 
   const ChartWindowSelector({
     super.key,
@@ -13,27 +13,19 @@ class ChartWindowSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const options = [200, 500, 1000, null];
-    String labelOf(int? v) => v == null ? '全履歴' : v.toString();
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          '表示ウィンドウ',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        DropdownButton<int?>(
-          value: chartWindow,
-          items: options
-              .map(
-                (v) =>
-                    DropdownMenuItem<int?>(value: v, child: Text(labelOf(v))),
-              )
-              .toList(),
-          onChanged: onChanged,
-        ),
+    return SegmentedButton<int>(
+      key: const Key('chartWindowSegmentedButton'),
+      segments: const [
+        ButtonSegment(value: 200, label: Text('標準')),
+        ButtonSegment(value: 500, label: Text('全体')),
       ],
+      selected: {chartWindow},
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onSelectionChanged: (selected) => onChanged(selected.first),
     );
   }
 }
