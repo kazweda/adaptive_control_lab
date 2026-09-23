@@ -4,6 +4,7 @@ import 'controllers/pid_controller_screen.dart';
 import 'controllers/str_controller_screen.dart';
 import 'plot.dart';
 import 'diagnostics_plot.dart';
+import 'components/chart_window_selector.dart';
 import 'components/simulation_status_panel.dart';
 import 'components/simulation_control_panel.dart';
 import 'components/disturbance_panel.dart';
@@ -26,7 +27,7 @@ class _MainScreenState extends State<MainScreen> {
   late Simulator simulator;
   Timer? simulationTimer;
   bool isRunning = false;
-  int _chartWindow = 200; // 200(標準) / 500(全体)
+  int _chartWindow = ChartWindowSelector.standardWindow;
   int _selectedControllerIndex = 0; // 0: PID, 1: STR
   String _appVersion = '1.0.0+1'; // アプリケーションバージョン
   double _scrollPosition = 0.0; // 共通スクロール位置（3つのプロット同期用）

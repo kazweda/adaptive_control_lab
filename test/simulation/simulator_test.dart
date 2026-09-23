@@ -11,9 +11,10 @@ void main() {
       expect(sim.controlInput, 0.0);
       expect(sim.targetValue, 1.0);
       expect(sim.stepCount, 0);
-      expect(sim.historyTarget, isEmpty);
-      expect(sim.historyOutput, isEmpty);
-      expect(sim.historyControl, isEmpty);
+      // 履歴には制御開始前の初期状態(k=0)が1件記録されている
+      expect(sim.historyTarget, [1.0]);
+      expect(sim.historyOutput, [0.0]);
+      expect(sim.historyControl, [0.0]);
     });
 
     test('1ステップ実行の確認', () {
@@ -22,9 +23,10 @@ void main() {
       sim.step();
 
       expect(sim.stepCount, 1);
-      expect(sim.historyTarget.length, 1);
-      expect(sim.historyOutput.length, 1);
-      expect(sim.historyControl.length, 1);
+      // 初期状態(k=0)分の1件 + 実行した1ステップ分
+      expect(sim.historyTarget.length, 2);
+      expect(sim.historyOutput.length, 2);
+      expect(sim.historyControl.length, 2);
     });
 
     test('複数ステップ実行の確認', () {
@@ -35,9 +37,10 @@ void main() {
       }
 
       expect(sim.stepCount, 10);
-      expect(sim.historyTarget.length, 10);
-      expect(sim.historyOutput.length, 10);
-      expect(sim.historyControl.length, 10);
+      // 初期状態(k=0)分の1件 + 実行した10ステップ分
+      expect(sim.historyTarget.length, 11);
+      expect(sim.historyOutput.length, 11);
+      expect(sim.historyControl.length, 11);
     });
 
     test('目標値追従の確認', () {
@@ -89,10 +92,11 @@ void main() {
         sim.step();
       }
 
-      expect(sim.historyResidual.length, sim.historyOutput.length);
-      expect(sim.historyPredictedOutput.length, sim.historyOutput.length);
+      // 残差・推定履歴は初期状態(k=0)分を持たないため、historyOutputより1件少ない
+      expect(sim.historyResidual.length, sim.historyOutput.length - 1);
+      expect(sim.historyPredictedOutput.length, sim.historyOutput.length - 1);
       expect(sim.historyEstimatedA, isNotEmpty);
-      expect(sim.historyActualA.length, sim.historyOutput.length);
+      expect(sim.historyActualA.length, sim.historyOutput.length - 1);
     });
 
     test('リセット機能の確認', () {
@@ -110,9 +114,10 @@ void main() {
       expect(sim.plantOutput, 0.0);
       expect(sim.controlInput, 0.0);
       expect(sim.stepCount, 0);
-      expect(sim.historyTarget, isEmpty);
-      expect(sim.historyOutput, isEmpty);
-      expect(sim.historyControl, isEmpty);
+      // reset後も初期状態(k=0)の1件は再記録される
+      expect(sim.historyTarget.length, 1);
+      expect(sim.historyOutput.length, 1);
+      expect(sim.historyControl.length, 1);
     });
 
     test('プラントパラメータ変更の確認', () {
@@ -262,8 +267,9 @@ void main() {
 
       expect(sim.isHalted, isTrue);
       expect(sim.stepCount, 5);
-      expect(sim.historyTarget.length, 5);
-      expect(sim.historyOutput.length, 5);
+      // 初期状態(k=0)分の1件 + 実行した5ステップ分
+      expect(sim.historyTarget.length, 6);
+      expect(sim.historyOutput.length, 6);
     });
 
     test('maxSteps到達時は最終ステップのデータが記録される', () {
@@ -273,9 +279,9 @@ void main() {
         sim.step();
       }
 
-      // 3ステップ分のデータがすべて記録されていること
+      // 3ステップ分のデータ + 初期状態(k=0)分の1件がすべて記録されていること
       expect(sim.stepCount, 3);
-      expect(sim.historyOutput.length, 3);
+      expect(sim.historyOutput.length, 4);
       // 最終出力値が記録されている（0でない）
       expect(sim.historyOutput.last, isNonZero);
     });
@@ -329,7 +335,8 @@ void main() {
 
       expect(sim.isHalted, isFalse);
       expect(sim.stepCount, 0);
-      expect(sim.historyTarget, isEmpty);
+      // reset後も初期状態(k=0)の1件は再記録される
+      expect(sim.historyTarget.length, 1);
 
       // reset後は再度step実行可能
       sim.pidKp = 0.3; // 通常のゲインに戻す
@@ -353,8 +360,9 @@ void main() {
       }
 
       expect(sim.isHalted, isTrue);
-      // halt時は履歴に追加されない（一貫性のため）
-      expect(sim.historyOutput.length, sim.stepCount);
+      // halt時は履歴に追加されない（一貫性のため）。
+      // +1は初期状態(k=0)分。
+      expect(sim.historyOutput.length, sim.stepCount + 1);
     });
   });
 
@@ -405,7 +413,8 @@ void main() {
       }
 
       expect(sim.stepCount, 10);
-      expect(sim.historyControl.length, 10);
+      // 初期状態(k=0)分の1件 + 実行した10ステップ分
+      expect(sim.historyControl.length, 11);
     });
 
     test('ノイズプリセットのシード固定で再現性がある', () {

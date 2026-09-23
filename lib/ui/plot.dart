@@ -159,9 +159,9 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
 
   /// グラフデータを構築
   ///
-  /// [visibleStart]/[visibleEnd] は現在スクロールで見えている範囲（Y軸スケール計算用、0始まりの配列インデックス）。
-  /// 折れ線自体は常に全データ（配列インデックス0〜dataLength-1、ステップ番号1〜dataLength）を描画し、
-  /// 横スクロールで表示範囲を移動する。
+  /// [visibleStart]/[visibleEnd] は現在スクロールで見えている範囲（Y軸スケール計算用）。
+  /// 折れ線自体は常に全データ（配列インデックス0〜dataLength-1。index 0は制御開始前の
+  /// 初期状態k=0を表す）を描画し、横スクロールで表示範囲を移動する。
   LineChartData _buildLineChartData(int visibleStart, int visibleEnd) {
     final dataLength = widget.historyTarget.length;
     final int startIndex = 0;
@@ -224,9 +224,8 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
         show: true,
         border: Border.all(color: Colors.grey[400]!),
       ),
-      // x軸はステップ番号（1始まり）で表示するため、配列インデックス+1を範囲とする
-      minX: dataLength > 0 ? 1 : 0,
-      maxX: dataLength > 0 ? dataLength.toDouble() : 0,
+      minX: startIndex.toDouble(),
+      maxX: dataLength > 0 ? endIndex.toDouble() : 0,
       minY: _calculateMinY(visibleStart, visibleEnd),
       maxY: _calculateMaxY(visibleStart, visibleEnd),
       lineBarsData: [
@@ -285,8 +284,8 @@ class _TimeSeriesPlotState extends State<TimeSeriesPlot> {
   ) {
     final spots = <FlSpot>[];
     for (int i = startIndex; i <= endIndex; i++) {
-      // 配列インデックスiは、i+1番目に実行されたステップの結果を表す
-      final x = (i + 1).toDouble();
+      // 配列インデックスiはそのままステップ番号k（index 0 = 初期状態k=0）
+      final x = i.toDouble();
       final y = data[i];
       spots.add(FlSpot(x, y));
     }
