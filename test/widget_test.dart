@@ -90,30 +90,30 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    // 初期選択は 200
-    expect(find.text('表示ウィンドウ'), findsOneWidget);
-    expect(find.text('200'), findsOneWidget);
+    // 初期選択は「標準」(200)
+    final segmentedButton = find.byKey(const Key('chartWindowSegmentedButton'));
+    expect(segmentedButton, findsOneWidget);
+    expect(tester.widget<SegmentedButton<int>>(segmentedButton).selected, {
+      200,
+    });
 
-    // ドロップダウンを開いて 500 を選択
-    await tester.tap(find.byType(DropdownButton<int?>));
+    // 「全体」(500)をワンタップで選択
+    await tester.tap(
+      find.descendant(of: segmentedButton, matching: find.text('全体')),
+    );
     await tester.pump();
-    await tester.tap(find.text('500').last);
-    await tester.pump();
-    expect(find.text('500'), findsOneWidget);
+    expect(tester.widget<SegmentedButton<int>>(segmentedButton).selected, {
+      500,
+    });
 
-    // 続けて 1000 を選択
-    await tester.tap(find.byType(DropdownButton<int?>));
+    // 「標準」(200)にワンタップで戻せる
+    await tester.tap(
+      find.descendant(of: segmentedButton, matching: find.text('標準')),
+    );
     await tester.pump();
-    await tester.tap(find.text('1000').last);
-    await tester.pump();
-    expect(find.text('1000'), findsOneWidget);
-
-    // 全履歴を選択
-    await tester.tap(find.byType(DropdownButton<int?>));
-    await tester.pump();
-    await tester.tap(find.text('全履歴').last);
-    await tester.pump();
-    expect(find.text('全履歴'), findsOneWidget);
+    expect(tester.widget<SegmentedButton<int>>(segmentedButton).selected, {
+      200,
+    });
   });
 
   testWidgets('コントローラー選択タブでPID/STRの有効表示が切り替わる', (WidgetTester tester) async {
